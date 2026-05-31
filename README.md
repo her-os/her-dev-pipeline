@@ -1,6 +1,6 @@
 # Her AI 开发管线
 
-15 个 Claude Code skill 组成的完整 AI 辅助开发流程。
+15 个 skill 组成的完整 AI 辅助开发流程，适用于 Claude Code 和 Codex。
 
 不是教你写代码，是教你怎么**驾驭 AI** 帮你写代码。
 
@@ -69,14 +69,16 @@
 ```bash
 # 克隆到本地
 git clone https://github.com/her-os/her-dev-pipeline.git
+cd her-dev-pipeline
 
-# 将 skills 目录链接到 Claude Code
-# 方式一：全部链接
-ln -s $(pwd)/her-dev-pipeline/skills/* ~/.claude/skills/
+# 链接到 Claude Code
+for d in skills/*/; do ln -sf "$(pwd)/$d" ~/.claude/skills/$(basename "$d"); done
 
-# 方式二：按需链接单个
-ln -s $(pwd)/her-dev-pipeline/skills/tdd ~/.claude/skills/tdd
+# 链接到 Codex（指向 Claude Code 的同一份，更新只需一处）
+for d in ~/.claude/skills/*/; do ln -sf "$d" ~/.codex/skills/$(basename "$d"); done
 ```
+
+更新时 `git pull` 即可，两边同时生效。
 
 ## 知识沉淀
 
