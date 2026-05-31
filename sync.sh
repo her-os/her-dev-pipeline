@@ -23,6 +23,7 @@ SKILLS=(
   improve-codebase-architecture
   her-dev-teammate
   code-map
+  setup-matt-pocock-skills
 )
 
 changed=()

@@ -1,6 +1,6 @@
 # Her AI 开发管线
 
-14 个 Claude Code skill 组成的完整 AI 辅助开发流程。
+15 个 Claude Code skill 组成的完整 AI 辅助开发流程。
 
 不是教你写代码，是教你怎么**驾驭 AI** 帮你写代码。
 
@@ -18,7 +18,14 @@
 
 完整图文版见 [`docs/pipeline.html`](docs/pipeline.html)（浏览器打开，29 页翻页式）。
 
-## 14 个 Skill
+## 15 个 Skill
+
+### 零 · 环境安装（新同事先跑这两个）
+
+| Skill | 作用 |
+|-------|------|
+| [`/setup-matt-pocock-skills`](skills/setup-matt-pocock-skills/) | 一键安装 Issue Tracker、Triage 标签、Domain 文档等基础 skill |
+| [`/code-map`](skills/code-map/) | 一键安装 LSP 语言服务器，让 AI 精准定位代码 |
 
 ### 壹 · 对齐需求
 
@@ -33,7 +40,6 @@
 
 | Skill | 作用 | 人参与？ |
 |-------|------|---------|
-| [`/code-map`](skills/code-map/) | 一键安装 LSP 语言服务器，让 AI 精准定位代码 | |
 | [`/handoff`](skills/handoff/) | 上下文快满时压缩交接，新会话断点续传 | |
 
 ### 叁 · 管好质量
@@ -54,7 +60,7 @@
 | [`/her-dev-teammate`](skills/her-dev-teammate/) | 分支创建、PR 提交、部署上线 | ◆ 确认 |
 | [`/improve-codebase-architecture`](skills/improve-codebase-architecture/) | 架构深化，发现重构机会，沉淀编码规范 | |
 
-> ◆ = 需要人参与的步骤。14 个环节中只有 5 个需要你动脑。
+> ◆ = 需要人参与的步骤。15 个 skill 中只有 5 个需要你动脑。
 
 ## 安装
 
