@@ -2,9 +2,33 @@
 
 15 个 skill 组成的完整 AI 辅助开发流程，适用于 Claude Code 和 Codex。
 
-不是教你写代码，是教你怎么**驾驭 AI** 帮你写代码。
+## 安装
 
-## 管线总览
+```bash
+git clone https://github.com/her-os/her-dev-pipeline.git
+cd her-dev-pipeline
+
+# 链接到 Claude Code
+for d in skills/*/; do ln -sf "$(pwd)/$d" ~/.claude/skills/$(basename "$d"); done
+
+# 链接到 Codex（指向 Claude Code 的同一份，更新只需一处）
+for d in ~/.claude/skills/*/; do ln -sf "$d" ~/.codex/skills/$(basename "$d"); done
+```
+
+更新时 `git pull` 即可，两边同时生效。
+
+## 项目初始化
+
+在每个代码仓库里首次使用前，跑这两个 skill：
+
+```
+/setup-matt-pocock-skills    ← 配置 Issue Tracker、Triage 标签、Domain 文档路径
+/lsp-setup                   ← 安装 LSP 语言服务器 + 会话 hook
+```
+
+然后把管线路由规则写入项目的 CLAUDE.md / AGENTS.md（模板见下方）。
+
+## 管线流程
 
 ```
 想法 → /standup → /grill-with-docs → /prototype(可选) → /to-prd
@@ -18,75 +42,67 @@
 
 完整图文版见 [`docs/pipeline.html`](docs/pipeline.html)（浏览器打开，29 页翻页式）。
 
-## 15 个 Skill
+## Skill 一览
 
-### 零 · 环境安装
+### 环境安装（跑一次）
 
-在代码仓库里首次使用管线前，先跑这两个 skill 完成项目级配置：
+| Skill | 作用 |
+|-------|------|
+| `/setup-matt-pocock-skills` | 配置 Issue Tracker、Triage 标签、CONTEXT.md 路径 |
+| `/lsp-setup` | 安装 LSP + Codex lsp-mcp + 会话 hook |
 
-| Skill | 作用 | 为什么需要 |
-|-------|------|-----------|
-| [`/setup-matt-pocock-skills`](skills/setup-matt-pocock-skills/) | 配置 Issue Tracker、Triage 标签、Domain 文档路径 | `/standup`、`/to-prd`、`/triage`、`/tdd` 等 skill 需要知道 Issue 往哪写、标签叫什么、CONTEXT.md 在哪读。不跑这个，这些 skill 找不到项目上下文。 |
-| [`/lsp-setup`](skills/lsp-setup/) | 安装 LSP 语言服务器 + 会话 hook | AI 修改代码前需要精准定位符号（跳转定义、查引用）。不装 LSP，AI 只能靠 grep 猜，慢且会漏。 |
-
-### 壹 · 对齐需求
+### 开发管线（日常使用）
 
 | Skill | 作用 | 人参与？ |
 |-------|------|---------|
-| [`/standup`](skills/standup/) | 分诊 Issue、推荐下一个任务 | |
-| [`/grill-with-docs`](skills/grill-with-docs/) | 扮演严格产品经理，拷问想法直到对齐 | ◆ |
-| [`/prototype`](skills/prototype/) | 快速原型验证（逻辑 or UI），用完即丢 | |
-| [`/to-prd`](skills/to-prd/) | 对话 → 15 节 PRD → 写入 GitHub Issue | ◆ 确认 |
+| `/standup` | 分诊 Issue、推荐下一个任务 | |
+| `/grill-with-docs` | 拷问想法，挖出所有细节 | ◆ |
+| `/prototype` | 快速原型验证（可选） | |
+| `/to-prd` | 对话 → PRD → 写入 GitHub Issue | ◆ 确认 |
+| `/tdd` | 测试驱动开发 | |
+| `/mp-review` | 双轴并行代码审查 | |
+| `/thermo-nuclear-code-quality-review` | 热核级代码质量审查 | |
+| `/e2e-verify` | 按验收标准自动验证 | |
+| `/bugfix` | 7 阶段诊断循环 | |
+| `/functional-test` | 分组手测，AI 陪测查 DB | ◆ |
+| `/her-dev-teammate` | 分支、PR、部署 | ◆ 确认 |
+| `/handoff` | 上下文快满时断点续传 | |
+| `/improve-codebase-architecture` | 架构深化，沉淀编码规范 | |
 
-### 贰 · 配好工具
+> ◆ = 需要人参与。15 个 skill 中只有 5 个需要你动脑。
 
-| Skill | 作用 | 人参与？ |
-|-------|------|---------|
-| [`/handoff`](skills/handoff/) | 上下文快满时压缩交接，新会话断点续传 | |
+## CLAUDE.md / AGENTS.md 路由模板
 
-### 叁 · 管好质量
+将以下内容复制到项目的 `CLAUDE.md` 或 `.codex/AGENTS.md` 中。agent 每次 session 启动时读取，知道什么情况该用什么 skill。
 
-| Skill | 作用 | 人参与？ |
-|-------|------|---------|
-| [`/tdd`](skills/tdd/) | 测试驱动开发，红→绿→重构循环 | |
-| [`/mp-review`](skills/mp-review/) | 双轴并行代码审查（Standards + Spec） | |
-| [`/thermo-nuclear-code-quality-review`](skills/thermo-nuclear-code-quality-review/) | 热核级代码质量审查，极严格可维护性审计 | |
-| [`/e2e-verify`](skills/e2e-verify/) | 按 PRD 验收标准逐条自动验证 | |
-| [`/bugfix`](skills/bugfix/) | 7 阶段诊断循环，像医生问诊 | |
-| [`/functional-test`](skills/functional-test/) | 分组手工测试，AI 陪测查 DB | ◆ |
+```markdown
+## 开发管线
 
-### 辅助
+按场景路由到对应 skill，不要跳步：
 
-| Skill | 作用 | 人参与？ |
-|-------|------|---------|
-| [`/her-dev-teammate`](skills/her-dev-teammate/) | 分支创建、PR 提交、部署上线 | ◆ 确认 |
-| [`/improve-codebase-architecture`](skills/improve-codebase-architecture/) | 架构深化，发现重构机会，沉淀编码规范 | |
-
-> ◆ = 需要人参与的步骤。15 个 skill 中只有 5 个需要你动脑。
-
-## 安装
-
-```bash
-# 克隆到本地
-git clone https://github.com/her-os/her-dev-pipeline.git
-cd her-dev-pipeline
-
-# 链接到 Claude Code
-for d in skills/*/; do ln -sf "$(pwd)/$d" ~/.claude/skills/$(basename "$d"); done
-
-# 链接到 Codex（指向 Claude Code 的同一份，更新只需一处）
-for d in ~/.claude/skills/*/; do ln -sf "$d" ~/.codex/skills/$(basename "$d"); done
+| 场景 | 做什么 |
+|------|--------|
+| 选任务 / 开始工作 | `/standup` |
+| 新功能 / 新想法 | `/grill-with-docs` → `/to-prd` → TDD 编码 |
+| 想先看看效果 | `/prototype`（grill 之后、to-prd 之前） |
+| 代码写完了 | `/mp-review` → `/e2e-verify` |
+| 验证不通过 | `/bugfix`，修完回 `/e2e-verify` |
+| 要求极严格审查 | `/thermo-nuclear-code-quality-review` |
+| 提交 PR 后 | 等 Codex Auto-Review，处理评论 |
+| 上线前手测 | `/functional-test` |
+| 分支 / PR / 部署 | `/her-dev-teammate` |
+| Bug / 报错 / 性能退化 | `/bugfix` |
+| 上下文快满 | `/handoff` |
+| 想改善代码结构 | `/improve-codebase-architecture` |
 ```
-
-更新时 `git pull` 即可，两边同时生效。
 
 ## 知识沉淀
 
-管线运行过程中持续积累三类知识文档：
+管线运行过程中持续积累三类文档：
 
-- **CONTEXT.md** — 业务术语表，AI 不再反复确认已知事实
-- **docs/adr/** — 技术决策记录，防止 AI 做出相反决策
-- **docs/specs/** — 已知陷阱，修相关代码前自动读取
+- **CONTEXT.md** — 业务术语表
+- **docs/adr/** — 技术决策记录
+- **docs/specs/** — 已知陷阱
 
 ## License
 
