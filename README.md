@@ -22,10 +22,12 @@
 
 ### 零 · 环境安装
 
-| Skill | 作用 |
-|-------|------|
-| [`/setup-matt-pocock-skills`](skills/setup-matt-pocock-skills/) | 一键安装 Issue Tracker、Triage 标签、Domain 文档等基础 skill |
-| [`/lsp-setup`](skills/lsp-setup/) | 为项目配置 LSP 代码智能 + 会话 hook |
+在代码仓库里首次使用管线前，先跑这两个 skill 完成项目级配置：
+
+| Skill | 作用 | 为什么需要 |
+|-------|------|-----------|
+| [`/setup-matt-pocock-skills`](skills/setup-matt-pocock-skills/) | 配置 Issue Tracker、Triage 标签、Domain 文档路径 | `/standup`、`/to-prd`、`/triage`、`/tdd` 等 skill 需要知道 Issue 往哪写、标签叫什么、CONTEXT.md 在哪读。不跑这个，这些 skill 找不到项目上下文。 |
+| [`/lsp-setup`](skills/lsp-setup/) | 安装 LSP 语言服务器 + 会话 hook | AI 修改代码前需要精准定位符号（跳转定义、查引用）。不装 LSP，AI 只能靠 grep 猜，慢且会漏。 |
 
 ### 壹 · 对齐需求
 
