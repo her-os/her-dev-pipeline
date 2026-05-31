@@ -1,0 +1,748 @@
+{
+  "columns": [
+    {
+      "id": "triage",
+      "title": "待分诊"
+    },
+    {
+      "id": "ready",
+      "title": "就绪"
+    },
+    {
+      "id": "in-progress",
+      "title": "进行中"
+    },
+    {
+      "id": "done",
+      "title": "完成"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "gh-her-web-17",
+      "title": "security: provision-gateway 绕过邀请码库存校验",
+      "description": "## 问题\n\n`/api/user/provision-gateway/route.ts` 在注册流程中使用 `validateInviteCode()` 判断用户是否持有有效邀请码来授予 invited quota，但这个调用**不经过 `redeemInviteCode()`**，不扣减库存、不检查是否已兑换。\n\n### 影响\n\n- 该路由可独立调用，不依赖 redeem 是否成功\n- 理论上可以用一个 `maxUses: 1` 的邀请码反复调用 provision-gateway 获取 invited quota\n\n### 修复方向\n\nprovision-gateway 应改为查询 `user_invite` 表记录（已兑换的事实），而非调用 `validateInviteCode`（库存校验）。\n\n### 来源\n\nIssue #15 安全审查中由 Codex 发现。",
+      "priority": "P1",
+      "column": "triage",
+      "tags": [
+        "bug",
+        "needs-triage"
+      ],
+      "github": 17,
+      "created": "2026-04-27",
+      "updated": "2026-05-20",
+      "order": 0,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-86",
+      "title": "fix: record extension quota as paid-Max credit row",
+      "description": "**Source**: Codex review PR #83, item #8 (P2)\n\n**Problem**: The admin extension path (`/api/admin/users/[id]/subscription/extend`) tops up the gateway directly via `topUpUserQuota` but does not insert a matching paid-Max `credit` row. Trial cleanup protects paid quota by summing local credit rows with paid-Max metadata, so `expireInviteTrialQuotaIfNeeded` can treat the extension top-up as unprotected balance.\n\n**File**: `src/app/api/admin/users/[id]/subscription/extend/route.ts` ~line 112\n\n**Fix**: Insert a credit row with appropriate metadata after gateway top-up.",
+      "priority": "P1",
+      "column": "triage",
+      "tags": [
+        "needs-triage"
+      ],
+      "github": 86,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 100,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-131",
+      "title": "百人内测后端需求清单",
+      "description": "@夙愿 百人内测下周启动，需要管理后台和后端做一批改造。\n\n**背景**：百人内测的流程是——用户在官网填申请表单 → 数据存到飞书多维表格 → 我们审核后分配邀请码 → 通过邮件发送邀请码 → 用户用邮箱+邀请码注册 Her → 我们追踪注册状态。目前管理后台和邮件发送都不支持这条链路，需要改造。\n\n前端表单改造见 [#128](https://github.com/her-os/Her-Web/issues/128)，由水良子改完代码后给夙愿部署。\n\n---\n\n**一、管理后台改造**\n\n1. **邀请码批量导出**（高）\n   - 邀请码列表页加「批量导出」按钮，一键导出当前已批量生成的邀请码\n   - 导出格式：纯文本，一个邀请码占一行，方便直接复制粘贴到飞书多维表格的「邀请码」列\n\n2. **已使用邀请码跳转用户详情页**（中）\n   - 点击「已使用邀请码」直接跳转到 `/zh/admin/users/{userId}`\n\n3. **微信名自动回写**（高）\n   - 用户在表单填写了邮箱和微信名 → 我们发邀请码 → 用户用该邮箱注册 → 注册成功后，系统自动把表单里的微信名写入管理后台用户详情页\n\n**二、后端 API**\n\n4. **按邮箱查询用户注册状态**（高）\n   - `GET /api/admin/users?email={email}`\n   - 返回：registered、userId、username、registeredAt、inviteCode、subscriptionPlan\n   - 用途：飞书多维表格通过此接口自动显示每个用户的注册状态\n\n5. **邮件发送接口**（高）\n   - 支持单个和批量发送\n   - 参数：收件人邮箱、邮件主题、邮件正文、邀请码\n   - 邮件正文由调用方编辑，接口负责发送\n\n6. **注册邮箱校验**（中，可选）\n   - 用户注册时校验邮箱是否与邀请码绑定的邮箱一致\n\n---\n\n**时间节点**：下周内测前就绪。",
+      "priority": "P1",
+      "column": "triage",
+      "tags": [
+        "needs-triage"
+      ],
+      "github": 131,
+      "repo": "her-web",
+      "created": "2026-05-19",
+      "updated": "2026-05-20",
+      "order": 200
+    },
+    {
+      "id": "gh-her-web-93",
+      "title": "付费上线前问题分级：P0/P1/P2（手测 + 技术测试）",
+      "description": "## 背景\n\n这是 her-web 付费等级上线前问题清单。目标读者是后续修复的人或 agent：**不需要打开本地 HTML，也不需要知道 U-008 是什么，也能看懂每个问题怎么复现、实际结果是什么、期望是什么、哪些信息还缺。**\n\n信息来源：\n\n- 用户手工页面测试：`docs/payment-tier-test-cases.html`，共 28 条。\n- 技术测试：`docs/payment-tier-technical-test-cases.html`，共 75 条，其中 61 条通过，14 条因为需要真实支付平台事件、续费事件、并发通知或 gateway 故障注入而阻塞。\n\n分级口径：\n\n- **P0**：明天开放付费前必须修，或必须关闭对应入口。否则可能错收、错扣、付费后不到账、错误发放/清空权益、阻断试用转付费。\n- **P1**：可以人工兜底，但上线首日会明显影响客服、财务、运营或用户理解。\n- **P2**：不挡首日付费，但要排期优化。\n\n---\n\n## P0-1：Pro 月付/季付/年付连续升级时，补差价金额错误且金额会随时间跳动\n\n来源：用户测试 U-008、U-010。\n\n### 测试场景\n\n测试目标是验证 Pro 套餐内部升级：\n\n1. 用户先购买 Pro 月付。\n2. 用户从 Pro 月付升级到 Pro 季付。\n3. 用户再从 Pro 季付升级到 Pro 年付。\n\n### 已观察到的实际结果\n\n- 单独直接购买 Pro 年付：正常。\n- 如果账号已经是 Pro 季付，再升级到 Pro 年付：补差价看起来正常。\n- 但如果路径是：**Pro 月付 → Pro 季付 → Pro 年付**，第三步升级到年付时金额不对。\n- 用户反馈：第三步金额像是仍然用了“月付升季付”的差价，而不是基于当前 Pro 季付订阅重新计算。\n- 另一个体验问题：补差价按分钟级剩余时间计算，一会儿会涨/变 1 分钱，用户会觉得系统金额不稳定。\n\n### 期望结果\n\n- 每次升级都应基于用户当前有效订阅计算，不应复用之前旧订阅或旧升级订单的金额。\n- 月付升季付后，下一次升年付应以“当前季付订阅”的已付金额、周期、剩余天数为依据。\n- 同一天内刷新页面，补差价金额应保持稳定；建议按天计算，不要按分钟/毫秒导致金额跳动。\n- 金额应可解释、可复算。\n\n### 待补充信息\n\n用户忘记了当时具体金额，没有保留月升季、季升年两个金额。修复时需要用测试账号重新复现并记录：\n\n- 月付升季付时页面显示金额。\n- 季付升年付时页面显示金额。\n- 直接季付升年付时页面显示金额。\n\n### 建议检查入口\n\n- `src/app/api/payment/checkout/route.ts`\n  - `prorateUpgradeAmount`\n  - checkout handler 中 Pro 套餐升级的 `basePrice` 计算。\n- `src/modules/payment/service.ts`\n  - 订单创建、订阅创建和 paid 后 fulfillment。\n\n### 验收标准\n\n- 覆盖三条链路：直接买年付、季付升年付、月付升季付再升年付。\n- 三条链路金额符合公式，并且同一天内不会随分钟跳动。\n- 自动化测试覆盖连续升级，防止后续回归。\n\n---\n\n## P0-2：Pro 升级 Max 的补差价不随剩余天数变化\n\n来源：用户测试 U-014、U-015。\n\n### 测试场景\n\n测试目标是验证 Pro 用户升级到 Max 月付时，系统是否正确扣除 Pro 剩余价值。\n\n用户操作过：\n\n1. 准备一个有 Max 购买资格、且已经开通 Pro 的账号。\n2. 进入购买页，点击 Max 升级。\n3. 查看升级金额。\n4. 通过后台/数据库把 Pro 或试用相关到期时间调整成不足 30 天，例如剩 29 天。\n5. 再次进入 Max 升级流程查看金额。\n\n### 已观察到的实际结果\n\n- 剩余 30 天和剩余 29 天时，Pro 升 Max 的显示价格一样。\n- 用户认为这不合理：少一天剩余权益，补差价应有变化。\n- 用户还观察到 Pro 升 Max 的逻辑和 Pro 月付升季付/年付不一样：Pro 升 Max 不显示具体算力折算值。\n\n### 期望结果\n\n- Pro 升 Max 的补差价应能反映 Pro 当前剩余价值。\n- 剩余 30 天和 29 天不应完全一样，除非产品明确规定按整月处理；如果按整月处理，页面也应说明。\n- 价格计算规则要和 Pro 内部升级保持一致的用户理解：扣除已付 Pro 剩余价值，再收 Max 差价。\n\n### 待补充信息\n\n- 用户确认语音识别里的“220 元”是错误的，不是实际金额。\n- 需要重新复现并记录：Pro 具体套餐（月/季/年）、当前到期日、调整后到期日、升级 Max 前后页面金额。\n\n### 建议检查入口\n\n- `src/modules/payment/service.ts`\n  - `calculateProToMaxUpgradeQuote`\n  - `createProToMaxUpgradeCheckout`\n  - `finalizePaidOrder`\n- `src/app/api/payment/upgrade/route.ts`\n- `src/app/api/payment/checkout/route.ts`\n\n### 验收标准\n\n- 同一个 Pro 账号，剩余 30 天和 29 天时，报价符合产品公式。\n- 页面或返回数据能解释扣除了多少 Pro 剩余价值。\n- 自动化测试覆盖不同剩余天数。\n\n---\n\n## P0-3：创建新的升级订单会让旧订单显示“已过期”，需要确认旧二维码付款后的履约安全\n\n来源：用户测试 U-014。\n\n### 测试场景\n\n测试目标是验证用户在升级 Max 时，如果创建了多笔未支付订单，旧订单是否仍能安全处理支付回调。\n\n用户看到的流程：\n\n1. Pro 用户进入 Max 升级流程。\n2. 创建一笔 Max 升级订单，停留在扫码/支付页面，但不支付。\n3. 用户关闭页面、跳转、或重新点击创建新的 Max 升级订单。\n4. 回到账单/订单状态查看旧订单。\n\n### 已观察到的实际结果\n\n- 创建新订单后，旧的未支付升级订单直接显示“订单状态已过期”。\n- 用户担心：如果用户已经扫码旧二维码，但没有立刻支付，随后系统把旧订单标成已过期；用户之后完成旧二维码付款，可能出现“钱付了但 Max 权益没到账”。\n\n### 需要修复者澄清/复现\n\n用户没有确认“旧二维码付款后真的没给权益”，目前是从页面状态推断出的高风险场景。\n\n修复时必须补测：\n\n- 旧订单变 expired 后，如果支付平台对旧订单发 paid notify，系统会怎么处理？\n- 旧订单变 expired 后，浏览器 callback / 手动同步能不能把订单改成 paid 并履约？\n- 是否会出现 provider 已 paid，但本地不发 Max 订阅/额度的情况？\n\n### 期望结果\n\n- 支付平台已支付是强事实，系统不能因为本地 expired 就直接丢弃。\n- 创建新订单前，应先同步旧 pending/created 订单状态。\n- 如果旧订单已支付，应履约旧订单，而不是创建新订单继续覆盖。\n- 如果 provider 查询失败，不应直接 expired；应保持可重试或进入人工处理状态。\n\n### 建议检查入口\n\n- `src/modules/payment/service.ts`\n  - `expireUserPendingUpgradeOrders`\n  - `shouldExpireRetryBlockingUpgradeOrder`\n  - `handlePaymentCallback`\n  - `finalizePaidOrder`\n- `src/app/api/user/billing/orders/[orderNo]/sync/route.ts`\n- `src/app/api/payment/callback/route.ts`\n- `src/app/api/payment/notify/[provider]/route.ts`\n\n### 验收标准\n\n- 旧 pending 订单在创建新订单前会先查 provider 状态。\n- provider 已 paid 的旧订单能正常履约。\n- provider 查询失败时不把订单直接变成不可恢复的 expired。\n- 重复通知、浏览器 callback 和手动同步都不会重复发权益。\n\n---\n\n## P0-4：Max 试用用户不能购买 Pro，阻断试用转付费\n\n来源：用户测试 U-014。\n\n### 测试场景\n\n测试目标是验证 Max 试用用户能否自由选择正式订阅 Pro 或 Max。\n\n用户操作：\n\n1. 准备一个有 Max 试用权限/试用额度的账号。\n2. 在试用有效期内打开购买页。\n3. 尝试购买 Pro。\n4. 用户后来通过数据库把试用状态改成过期，再次尝试购买 Pro 和 Max。\n\n### 已观察到的实际结果\n\n- 有 Max 试用权限或 Max 试用额度时，用户不能订阅 Pro。\n- 试用过期后，同一个用户可以购买 Pro，也可以购买 Max。\n\n### 期望结果\n\n用户确认：**只要用户不是正式 Max 付费订阅，就应该允许购买 Pro。**\n\n具体规则：\n\n- Max 试用用户：可以买 Pro，也可以买 Max。\n- Pro 试用用户：可以买 Pro，也可以买 Max（如果有 Max 购买资格）。\n- 正式 Max 订阅用户：不能再购买 Pro，因为属于降级/冲突。\n- 正式 Pro 订阅用户：如果有 Max 资格，可以升级 Max。\n\n### 建议检查入口\n\n- `src/config/plans.ts`\n  - `getPricingPlanAction` 当前容易只看 `activeProductLine`。\n- `src/modules/entitlements/service.ts`\n  - `getUserEntitlement` 会把 active invite trial policy 提升为 productLine。\n  - `hasHistoricalMaxCapability` 用于 Max 资格，不应等同于正式 Max 订阅。\n- `src/app/api/payment/checkout/route.ts`\n\n### 验收标准\n\n- API 和 UI 都允许 Max 试用用户买 Pro。\n- 正式 Max 用户买 Pro 被拒绝。\n- 不允许只修前端按钮，后端 checkout API 也必须一致。\n- 增加测试覆盖 Max trial、expired trial、paid Max、paid Pro 四类用户。\n\n---\n\n## P0-5：后台取消/创建订阅后，Web 状态和 gateway 额度可能不同步\n\n来源：用户测试 U-027。\n\n### 测试场景\n\n测试目标是验证管理员手动创建、取消、调整订阅时，web 订阅状态和 gateway 额度是否一致。\n\n用户观察到的现象包括：\n\n- 管理后台取消订阅需要填写原因，但取消后页面里看不到原因记录。\n- 如果用户已经有 Max 订阅，管理员后台尝试创建 Pro 订阅，页面可能没有明确反馈。\n- 某些情况下取消订阅后，后台还残留一个不知道哪里来的 Pro 订阅。\n- 取消订阅后，gateway 那边的额度似乎已经被清空，但 web 这边状态还不对。\n- 用户不确定超级管理员和普通管理员的差异；目前感觉两类管理员操作都可能有问题，需要重新查。\n\n### 期望结果\n\n- 如果用户已有 active Max，后台创建 Pro 应明确报错或要求先取消/处理 Max，不能静默失败，也不能生成冲突订阅。\n- 取消订阅后，web 当前订阅、billing 展示、gateway 余额必须一致。\n- 取消原因应能在用户详情或财务时间线看到。\n- 权限不足时必须明确提示，不得看起来点了没反应。\n- gateway 同步失败时应明确提示“本地已保存但 gateway 同步失败”，并提供重试路径。\n\n### 需要修复者重新复现\n\n用户没有保留完整矩阵。请至少覆盖：\n\n- 普通管理员取消 Pro。\n- 普通管理员取消 Max。\n- 超级管理员取消 Pro。\n- 超级管理员取消 Max。\n- 已有 Max 时创建 Pro。\n- 已有 Pro 时创建 Max。\n- 每次操作后检查：web 用户详情、用户前台账单、gateway 额度。\n\n### 建议检查入口\n\n- `src/modules/admin/subscriptions.ts`\n  - `createManualSubscription`\n  - `cancelSubscription`\n  - `updateProSubscriptionMaxModelAccess`\n- `src/app/api/admin/users/[id]/subscription/route.ts`\n- `src/app/api/admin/users/[id]/subscription/cancel/route.ts`\n- `src/app/api/admin/users/[id]/subscription/model-access/route.ts`\n- `src/app/api/admin/users/[id]/_gateway-sync` 相关逻辑\n\n### 验收标准\n\n- 管理后台操作失败有明确错误提示。\n- 管理后台不能创建互相冲突的 active 订阅。\n- 取消原因可见。\n- gateway sync 失败可见且可重试。\n- 操作后 web/gateway 状态一致。\n\n---\n\n## P0-6：真实支付回调和异常链路仍需上线前 smoke\n\n来源：技术测试 T-035、T-037、T-038、T-071、T-072、T-073。\n\n### 已知现状\n\n技术测试里相关单测/代码契约通过，但这些场景没有真实支付平台事件：\n\n- 支付宝/微信成功回调。\n- 浏览器 callback 和支付平台 notify 并发。\n- 同一成功 notify 重复发送。\n- 支付取消/失败通知。\n- 支付平台查不到 session。\n- 微信支付真实沙箱下单 payload / 回调记录。\n\n### 为什么是 P0\n\n明天如果开放真实付费，单测通过不能证明支付平台真实 payload、签名、回调时序、重复通知和浏览器返回并发都正确。\n\n### 验收标准\n\n- 至少完成微信或支付宝真实沙箱/小额真实支付 smoke。\n- 记录订单号、支付通道、平台流水号、callback/notify 到达顺序、最终订单状态、订阅状态、额度状态。\n- 重复 notify 不重复发权益。\n- cancel/failed 不显示 paid。\n- provider 查询失败时进入可重试或人工处理，不吞订单。\n\n---\n\n## P1-1：Pro 用户/试用用户的额度展示混乱\n\n来源：用户测试 U-006、U-011、U-017、U-020。\n\n### 已观察到的实际结果\n\n- Pro 试用账号登录后，在“余额与用量”下能看到“Max 额度”。\n- 付款 Pro 后仍然有 Max 额度展示。\n- 用户认为多数 Pro 用户不应该看到 Max 模型或 Max 额度概念。\n- Max 用户充值后，“余额与用量”整体消失，只剩“Max 额度”。\n- 试用额度本身可用于 Pro 和 Max 模型，但是否能显示 Max 模型由客户端按权限判断。\n- 用户觉得“适用 Max 额度 / 适用 Pro 额度”不如统一成“适用额度”。\n\n### 期望结果\n\n- 普通 Pro 用户不要看到 Max 额度或 Max 模型暗示。\n- 试用额度和正式订阅额度要区分。\n- 前台可以统一叫“适用额度”，但后台/接口仍保留来源：试用、订阅、人工赠送、充值等。\n- “当前订阅”和“当前试用到期”不要重复表达同一状态。\n\n### 建议检查入口\n\n- `src/app/api/user/billing/route.ts`\n- `src/app/[locale]/settings/billing/page.tsx`\n- `src/config/locale/messages/zh/settings.json`\n- `src/config/locale/messages/en/settings.json`\n- `src/app/[locale]/admin/users/[id]/page.tsx`\n\n---\n\n## P1-2：财务和订单后台缺少对账必需信息，搜索也不支持订单号\n\n来源：用户测试 U-018、U-022、U-017。\n\n### 已观察到的实际结果\n\n- 财务后台/用户后台需要但目前缺少或展示不足的信息：\n  - 本地支付订单号。\n  - 支付渠道流水号，例如微信支付订单号。\n  - 付款金额。\n  - 付款时间。\n  - 支付通道。\n  - 用户账号、昵称。\n  - 支付类型：哪个套餐、多久。\n  - 动账属性：充值、退款、补差、测试。\n  - 发票状态：已开/未开。\n- 当前搜索只能通过用户昵称或邮箱搜索，不能通过订单号搜索。\n- 用户订单列表只显示日期，没有具体创建时间。\n- 订单排序不按最新创建时间；例如先后创建 Pro 年付和 Pro 月付，页面固定把 Pro 年付排在第一条。\n\n### 期望结果\n\n- 财务搜索支持订单号、渠道流水号、套餐名、支付方式。\n- 订单列表显示具体创建时间/支付时间。\n- 订单按最新事件时间排序。\n- 套餐显示为 Pro 月付、Pro 季付、Pro 年付、Max 月付，而不是内部 id。\n- 发票状态可以先做字段/占位，前期人工处理也要能标记。\n\n### 建议检查入口\n\n- `src/app/api/admin/finance/route.ts`\n- `src/app/api/admin/finance/users/[id]/route.ts`\n- `src/app/[locale]/admin/finance/page.tsx`\n- `src/app/[locale]/admin/finance/[id]/page.tsx`\n- `src/app/[locale]/admin/users/[id]/page.tsx`\n\n---\n\n## P1-3：管理后台展示内部套餐字段，不利于运营/财务判断\n\n来源：用户测试 U-007。\n\n### 已观察到的实际结果\n\n购买 Pro 月付/季付后，管理员“财务与权益”里显示 `domestic_monthly`、`domestic_quarterly`，而不是 Pro 月付、Pro 季付。\n\n### 期望结果\n\n面向运营/财务/客服的页面都显示中文业务名称：\n\n- Pro 月付\n- Pro 季付\n- Pro 年付\n- Max 月付\n\n内部 id 可以放到 debug/meta 区域，但不应作为主标题。\n\n---\n\n## P1-4：登录/退出后再次登录偶发无反应\n\n来源：用户测试 U-010。\n\n### 已观察到的实际结果\n\n用户退出账号后，再点击登录，偶发无法登录或点击无反应。强制刷新也不行，需要关闭当前标签页，重新打开一个标签页后才恢复。\n\n用户补充：好像是特定页面退出后才会发生。\n\n### 期望结果\n\n退出登录后，当前页面应能重新登录；不需要关闭标签页。\n\n### 待复现\n\n需要确认发生页面、浏览器控制台错误、session/cookie/localStorage 状态。\n\n---\n\n## P1-5：已注册邮箱再次注册时错误文案不准确\n\n来源：用户测试 U-002。\n\n### 已观察到的实际结果\n\n用户已用某邮箱注册过，再次点击注册时，系统显示“操作失败，请稍后再试”，而不是提示该邮箱已注册。\n\n### 期望结果\n\n应提示类似：\n\n- 该邮箱已注册，请直接登录。\n- 或提供跳转登录/找回密码入口。\n\n---\n\n## P1-6：老用户 Max 模型权限开关异常\n\n来源：用户测试 U-023。\n\n### 已观察到的实际结果\n\n用户反馈：似乎只有 5 月 12 日及之前注册的用户，无法设置是否能使用 Max 模型。已购买 Max 订阅后，也无法操作是否可用 Pro/Max 模型。\n\n### 期望结果\n\n- 历史用户和新用户权限模型一致。\n- 如果是正式 Max 订阅，是否允许手动切换模型权限需要产品确认；但页面/API不能无响应。\n- 如果不能操作，应明确显示原因。\n\n### 建议检查入口\n\n- `src/modules/admin/subscriptions.ts`\n  - `updateProSubscriptionMaxModelAccess`\n- `src/app/api/admin/users/[id]/subscription/model-access/route.ts`\n- 用户历史数据中的 `subscription.productLine`、`subscription.modelRegions`、`planId`。\n\n---\n\n## P1-7：上游订阅取消和真实续费事件缺少真实平台验证\n\n来源：技术测试 T-033、T-036、T-049、T-050、T-051。\n\n### 已知现状\n\n代码路径检查通过，但缺少真实支付平台事件验证：\n\n- Pro 升 Max 后，上游订阅是否真的取消。\n- Max 真实续费通知。\n- Pro 真实续费通知。\n- 缺少订阅周期字段的续费事件。\n\n### 分级说明\n\n如果明天只开放单次购买/手动续费，这是 P1。  \n如果明天开放自动续费或依赖上游订阅续费，这是 P0。\n\n---\n\n## P2：后续体验和产品化\n\n### 用户侧取消订阅入口缺失\n\n来源：U-027。\n\n用户侧目前没有可取消订阅入口。如果短期由人工客服处理，需要页面给出明确说明或联系入口。\n\n### 中英文页面文案一致性未测\n\n来源：U-028。\n\n上线前建议至少扫一遍购买页、账单中心、支付状态文案。\n\n### 退款、通用额度、手动充值和发票流程需要产品化\n\n来源：U-018、U-017。\n\n用户提出的后续方向：\n\n- 增加“通用额度”，区别于试用额度，可长期有效。\n- 用户手动充值额度。\n- 充值额度可退款。\n- 一键原路退款。\n- 发票已开/未开状态。\n\n---\n\n## 已有相关 issue\n\n- #66 试用账户无法延长试用期或取消试用。\n- #85 zero-price upgrade fulfillment 失败未显式暴露。\n- #88 支付金额 95% 阈值决策。\n- #92 零金额支付/内部升级策略决策。\n\n---\n\n## 建议修复顺序\n\n1. 先处理或关闭升级入口：P0-1、P0-2、P0-3、P0-4。\n2. 做真实支付 smoke：P0-6。\n3. 修后台订阅和 gateway 同步：P0-5。\n4. 上线首日尽快补 P1 财务、搜索、展示、登录问题。\n5. P2 进入后续产品排期。",
+      "priority": "P2",
+      "column": "triage",
+      "tags": [
+        "bug",
+        "needs-triage"
+      ],
+      "github": 93,
+      "created": "2026-05-13",
+      "updated": "2026-05-20",
+      "order": 300,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-salon-75",
+      "title": "UX: Discover 流程卡片重复渲染",
+      "description": "## 现象\n\n每次用户选完一个维度，进度表格整体重新生成，已完成的打勾和当前指针全部重画，导致聊天区出现多张几乎相同的卡片。\n\n## 建议\n\n改为状态原地更新，而非每次重新渲染整张表格。\n\n来源：高高 Beta DEV 0.0.4 测试（发现 1）",
+      "priority": null,
+      "column": "triage",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 75,
+      "repo": "her-salon",
+      "created": "2026-05-21",
+      "updated": "2026-05-21",
+      "order": 400
+    },
+    {
+      "id": "gh-her-salon-70",
+      "title": "bug: 内置 Skill 未注册到 Claude Code（Unknown skill）",
+      "description": "## 现象\n\n调用 `her-discover` 时报 `Error: Unknown skill: her-discover`。skill 文件已在包内 `pa-template/.claude/skills/her-discover/` 中确认存在（TC-006 通过），但 Claude Code 的 Skill 工具不识别。\n\n## 影响范围\n\n可能影响**所有 Her 内置 skill**——凡是通过 PA 模板部署到用户工作空间的 skill，如果没有被正确注册到 Claude Code 的 available skills 列表，都会出现这个问题。\n\n## 复现路径\n\n1. 完成 her-init onboarding\n2. 在新会话中输入触发词或手动调用 `/her-discover`\n3. 观察 Skill tool 输出 `Unknown skill: her-discover`\n\n## 预期行为\n\nPA 模板中的 skill 在工作空间初始化后应自动注册到 Claude Code 的 skill 列表。\n\n## 根因猜测\n\nClaude Code 的 Skill 工具可能只读取特定路径下的 skill 定义（如 `~/.claude/skills/` 或项目 `.claude/skills/`），而 Her 的 PA 模板部署路径可能不在扫描范围内。需要确认 skill 注册机制和实际部署路径是否匹配。\n\n来源：高高、看门 Beta DEV 0.0.4 测试",
+      "priority": null,
+      "column": "triage",
+      "tags": [
+        "bug"
+      ],
+      "github": 70,
+      "repo": "her-salon",
+      "created": "2026-05-21",
+      "updated": "2026-05-21",
+      "order": 500
+    },
+    {
+      "id": "gh-her-salon-68",
+      "title": "QuestionCard: 折叠态答案文本重启后丢失",
+      "description": "## Problem\n\nQuestionCard 折叠态显示用户选择的答案文本（如「✓ 用过一些」），但重启后退化为「已响应」。\n\n## Root Cause\n\n答案存储在 React 组件的 `useState`（`answeredMap`）中，不持久化。虽然 `handleConfirm` 时已通过 `updateMessage` 将 answers 写入 store 的 `toolInput.answers`，但重启后消息从 session JSONL 重建，`updateMessage` 的修改丢失。\n\n## Proposed Fix\n\n用 localStorage 按 message ID 缓存答案，重启后恢复。\n\n## Current Workaround\n\n展开后显示问题文本（无答案文本），折叠态显示「已响应」。",
+      "priority": null,
+      "column": "triage",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 68,
+      "repo": "her-salon",
+      "created": "2026-05-21",
+      "updated": "2026-05-21",
+      "order": 600
+    },
+    {
+      "id": "gh-her-salon-65",
+      "title": "QuestionCard: Inline 渲染 + 自适应布局重构",
+      "description": "## Problem Statement\n\nQuestionCard 当前以 floating overlay 形式渲染在 InputBar 上方，存在两个体验问题：\n\n1. **位置冲突**：浮窗遮挡对话流，用户阅读上下文时被打断；若改为右侧弹出则偏离视线焦点\n2. **空间利用差**：选项始终纵向全宽按钮排列，短选项（如库名、Yes/No）浪费大量空间\n\n## Solution\n\n将 QuestionCard 改为对话流内 inline 渲染，配合自适应流式布局和折叠已答态，使问答交互融入自然阅读节奏。\n\n## User Stories\n\n1. As a user, I want to see questions inline in the conversation so that my reading flow is not interrupted by floating overlays\n2. As a user, I want short options displayed as horizontal chips so that simple questions take minimal vertical space\n3. As a user, I want answered questions to collapse into a compact summary so that they don't dominate the conversation history\n4. As a user, I want a bottom indicator when a pending question scrolls out of view so that I can quickly navigate back to it\n\n## Requirements\n\n### 功能需求\n\n- QuestionCard 在对话流中原位渲染（移除 floating 模式）\n- 选项布局根据内容长度自适应：短选项水平 flex-wrap，长选项纵向排列\n- 回答后折叠为单行摘要（如 `✓ Zustand`），点击可展开完整问答\n- 卡片离开可视区域时，InputBar 上方显示紧凑指示条，点击滚动到卡片位置\n\n### 非功能需求\n\n- 布局切换无闪烁（CSS-only 判断或首次渲染即确定）\n- 动画过渡平滑（折叠/展开、指示器出现/消失）\n- 不影响已有 PermissionCard 和 PlanReviewCard 的 floating 行为\n\n## Acceptance Criteria\n\n- [ ] Unresolved QuestionCard 在对话流中 inline 渲染，不再浮动于 InputBar 上方\n- [ ] 选项 label 总长度 ≤ 容器宽度 80% 时，使用水平 flex-wrap 布局\n- [ ] 选项 label 总长度 > 容器宽度 80% 或任一选项含 description 超过 40 字符时，使用纵向布局\n- [ ] 回答提交后，卡片动画折叠为单行摘要（显示选中选项文本）\n- [ ] 点击折叠态可展开查看完整问答历史\n- [ ] 问题卡片滚出视口时，InputBar 上方出现指示条 `⬆ N question pending`\n- [ ] 点击指示条平滑滚动到对应 QuestionCard\n- [ ] 问题卡片回到视口时指示条自动消失\n- [ ] 多问题（multi-step）流程中，进度条和逐步回答仍正常工作\n- [ ] PermissionCard / PlanReviewCard 的 floating 行为不受影响\n\n## Implementation Decisions\n\n### 模块划分\n\n| 模块 | 职责 |\n|------|------|\n| QuestionCard layout | 自适应布局判断 + 折叠/展开态 + 水平 chip 渲染 |\n| Inline rendering | 移除 InputBar 中 question 类型的 floating 逻辑，MessageBubble 恢复渲染 unresolved questions |\n| PendingIndicator | IntersectionObserver 检测 QuestionCard 可见性，控制指示条显示和滚动行为 |\n\n### 布局判断策略\n\n使用 `useLayoutEffect` + ref 测量选项总渲染宽度，与容器宽度比较：\n- ratio ≤ 0.8 → 水平 flex-wrap\n- ratio > 0.8 → 纵向 flex-col\n\n首次渲染前以 `visibility: hidden` 测量，避免布局闪烁。\n\n### 折叠态\n\n- 默认折叠为：`✓ {selectedLabel}` 单行\n- 多选时：`✓ {label1}, {label2}`\n- 展开后显示完整问题文本 + 所有选项（disabled 态）\n\n### Pending Indicator\n\n- 使用 IntersectionObserver 监听 QuestionCard DOM 节点\n- threshold: 0 (完全不可见时触发)\n- 指示条渲染在 InputBar 内部（floatingCard 原位置），样式为��凑的一行文本 + 点击区域\n\n## ADR-lite Decisions\n\n- **保留 PermissionCard/PlanReviewCard 的 floating 行为**：这两种卡片需要立即响应且不应被对话推走，与 QuestionCard 的交互节奏不同\n- **布局判断用 DOM 测量而非字符数**：不同字体下字符宽度差异大，DOM 测量更准确\n- **折叠态是 CSS 动画而非条件渲染**：保留 DOM 节点用于 IntersectionObserver 持续监听\n\n## Testing Decisions\n\n| 模块 | 测试类型 |\n|------|----------|\n| 布局判断函数（shouldUseHorizontalLayout） | Unit test |\n| 状态转换（pending → answered → collapsed） | Unit test |\n| QuestionCard 渲染 | Snapshot test |\n| PendingIndicator 显示/隐藏 | Unit test（mock IntersectionObserver） |\n\nPrior art: `src/hooks/__tests__/thinkingSnapshot.test.ts`\n\n## Definition of Done\n\n所有 AC 通过 + snapshot 测试覆盖 + 无 PermissionCard/PlanReviewCard 回归。\n\n## E2E Verification Environment\n\n- 本地 dev server (`pnpm dev`)\n- 触发 AskUserQuestion 的方式：使用 Claude Code 调用含 AskUserQuestion 的 tool\n- 验证多问题步进、短选项水平布局、长选项纵向布局三种场景\n\n## Out of Scope\n\n- PermissionCard / PlanReviewCard 的定位方式变更\n- QuestionCard 的 preview 字段支持（SDK 有此字段但当前未实现）\n- 多 Tab 场景下的指示器去重\n\n## Further Notes\n\n- 当前 `floating` prop 控制是否有 `ml-11` 左边距，inline 模式下沿用 MessageBubble 的缩进规则即可\n- InputBar 中 floatingCard selector 需保留对 `plan_review` 和 `permission` 类型的处理",
+      "priority": null,
+      "column": "triage",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 65,
+      "repo": "her-salon",
+      "created": "2026-05-21",
+      "updated": "2026-05-21",
+      "order": 700
+    },
+    {
+      "id": "gh-her-web-140",
+      "title": "Admin 手动创建订阅走续费路径时未更新套餐元数据，导致额度超发",
+      "description": "## 问题描述\n\nAdmin 后台对已有 `domestic_quarterly` 订阅的用户创建 `domestic_yearly` 订阅时，`createManualSubscription` 将其识别为 same-tier renewal（同层级续费），只更新了有效期和描述，未更新套餐元数据字段。同时旧季付 credit 未被过期，与新年付 credit 同时 active，导致 gateway 额度超发。\n\n涉及三处代码缺陷：\n1. **renewal path SET 不完整**（`src/modules/admin/subscriptions.ts:306-316`）：只更新 `currentPeriodEnd` / `status` / `description` / `updatedAt`，未更新 `productId` / `planId` / `planName` / `productName` / `intervalCount` / `amount` / `creditsAmount` / `usagePolicyId`\n2. **sameTierRenewal 判定过宽**（`src/modules/admin/subscriptions.ts:144-153`）：所有 domestic→domestic 转换都被视为续费，不区分季付→年付这种跨套餐变更\n3. **续费时未过期旧 credit**（`src/modules/admin/subscriptions.ts:346-369`）：新 credit 创建时旧 credit 保持 active，导致双重额度\n\n## 复现步骤\n\n1. 用户已有 active 的 `domestic_quarterly` 订阅\n2. Admin 页面点击「创建订阅」，选择 `domestic_yearly`\n3. `getManualSubscriptionTransition()` 返回 `sameTierRenewalSubscriptionId`（因为都是 domestic）\n4. `createManualSubscription()` 走 renewal path\n5. 订阅记录的 planId 等仍为 `domestic_quarterly`，有效期为原季付结束日 + 12 个月（共 15 个月）\n6. 旧季付 credit（7.5B）和新年付 credit（30B）同时 active，gateway 多发 7.5B\n\n## 期望行为\n\n- 跨套餐变更（如季付→年付）应被识别为「升级」而非「续费」，或者续费路径应完整更新所有套餐元数据字段\n- 有效期应基于新套餐的 intervalCount 重新计算\n- 旧套餐的 credit 在新套餐生效时应被过期处理，避免额度叠加\n\n## 来源\n\n- 用户 981710@qq.com 的生产数据已手动修复（订阅→domestic_yearly、过期多余 credit、扣回 gateway 7.5B）",
+      "priority": "P0",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 140,
+      "repo": "her-web",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 800
+    },
+    {
+      "id": "gh-her-web-142",
+      "title": "API Key 泄露可被无限调用：gateway 普通请求路径无 user.quota 检查 + token unlimited_quota 默认开启",
+      "description": "## 问题描述\n\nAPI Key 泄露后，攻击者可以无限调用 AI 模型接口，不会被额度系统拦截。\n\n两个问题叠加导致：\n\n1. **her-web 侧**：`createGatewayUser()`（新用户注册）和 `repairGatewayToken()`（token 修复）创建 token 时 `unlimitedQuota: true`，导致 token 级额度检查被跳过\n2. **her-gateway 侧**：普通请求路径 `PreConsumeTokenQuota`（quota.go:343）只检查 token 级额度，不检查 user.quota。WSS 路径有 user.quota 检查，普通路径没有\n\n叠加效果：`unlimitedQuota=true` 跳过 token 检查 → 普通路径无 user.quota 检查 → 无任何额度拦截 → user.quota 可被扣到负数且不拒绝请求。\n\n## 复现步骤\n\n1. 注册一个新用户，获取 API Key\n2. 用完所有额度（user.quota 归零或为负）\n3. 用该 API Key 继续发起模型请求\n4. 请求仍然成功，user.quota 持续扣为负数\n\n## 期望行为\n\nuser.quota 不足时，所有请求路径（普通 + WSS）均拒绝请求。\n\n## 代码定位\n\n### her-web（token 创建默认值）\n\n| 位置 | 行号 | 当前值 |\n|------|------|--------|\n| `createGatewayUser()` | src/modules/api-gateway/service.ts:442 | `unlimitedQuota: true` |\n| `repairGatewayToken()` | src/modules/api-gateway/service.ts:956 | `unlimitedQuota: true` |\n| `topUpUserQuota()` | src/modules/api-gateway/service.ts:1678 | ✅ 已修（5/15 b47700a） |\n\n### her-gateway（额度检查缺失）\n\n| 路径 | 位置 | user.quota 检查 | token 检查 |\n|------|------|----------------|-----------|\n| 普通请求 `PreConsumeTokenQuota` | service/quota.go:343 | ❌ 无 | 有（但 unlimited 跳过） |\n| WSS 请求 `PreWssConsumeQuota` | service/quota.go:89 | ✅ 有（line 141） | 有（但 unlimited 跳过） |\n\n### 关键代码\n\n```go\n// quota.go:343 — 普通路径，无 userQuota 检查\nfunc PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {\n    // ...\n    // 注意：这里没有 userQuota < quota 的检查\n    if !relayInfo.TokenUnlimited && token.RemainQuota < quota {\n        return fmt.Errorf(\"token quota is not enough...\")\n    }\n    // UnlimitedQuota=true 时直接跳过，无任何拦截\n}\n```\n\n## 影响范围\n\n- 所有用户的 API Key（当前 token 全部 unlimited_quota=true）\n- 今天百人内测上线，新注册用户也会拿到 unlimited token\n- 攻击者获取任意 API Key 即可无限消耗上游 AI 额度\n\n## 关联\n\n- 前身 issue：#121（已关闭，范围不够）\n- 相关修复：b47700a（5/15，修了 topUpUserQuota 路径，但创建路径未改）\n- 相关机制：5/15 已实现 `syncTokenRemainQuota`，改 unlimited=false 后可保证 token 余额同步",
+      "priority": "P0",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-human"
+      ],
+      "github": 142,
+      "repo": "her-web",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 900
+    },
+    {
+      "id": "gh-her-web-92",
+      "title": "decision: zero-amount payment acceptance policy",
+      "description": "**Source**: Codex review PR #82, item #5 (P2)\n\n**Current behavior**: When `expectedAmount = 0` (e.g., 100% promo code or free upgrade), `isPaymentAmountAcceptable` returns `true` without checking `paidAmount`.\n\n**Codex concern**: A Stripe checkout with 100% promo might report `paidAmount: 0` which gets accepted.\n\n**Context**: This is intentional — supports zero-amount internal upgrade orders. The test `allows zero-amount internal upgrades` explicitly validates this behavior.\n\n**File**: `src/modules/payment/service.ts:434-435`",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "ready-for-human"
+      ],
+      "github": 92,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 1000,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-87",
+      "title": "fix: route domestic trial to standard checkout, not upgrade",
+      "description": "**Source**: Codex review PR #83, item #9 (P2)\n\n**Problem**: `getPricingPlanAction` classifies any domestic entitlement as Pro→Max upgrade, even when access is only an invite/trial with no active Pro subscription. This causes `createProToMaxUpgradeCheckout` to throw 'No active Pro subscription to upgrade'.\n\n**File**: `src/config/plans.ts` ~line 298\n\n**Fix**: Check for active subscription status before routing to upgrade checkout. Trial-only domestic users should see standard Max purchase.",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 87,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 1100,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-85",
+      "title": "fix: surface failed zero-price upgrade fulfillment",
+      "description": "**Source**: Codex review PR #83, item #6 (P2)\n\n**Problem**: In the zero-price upgrade branch, `finalizePaidOrder` can fail the gateway top-up, roll the local order back to `pending`, and return without throwing. The caller still returns a successful `CheckoutSession`, so the user is redirected as if the upgrade succeeded while no Max subscription/quota was actually fulfilled.\n\n**File**: `src/modules/payment/service.ts` ~line 584\n\n**Fix**: Check `finalizePaidOrder` result or make it throw on gateway failure in the zero-price path.",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 85,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 1200,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-95",
+      "title": "P1: Unify billing/admin timeline labels, amounts, and statuses for payments, trial handoff, and upgrade orders",
+      "description": "## Problem\n\nCurrent user/admin billing views mix payment, trial handoff, and upgrade records in ways that are hard to understand.\n\nNew regression feedback showed several concrete inconsistencies:\n\n1. User-side upgrade pending orders show `已过期`, while admin-side related rows show generic `其他状态`.\n2. Trial handoff records such as invite-based `Max 试用` appear mixed into the same timeline with amount-like `+¥1` entries, which reads like payment money instead of trial quota/business state.\n3. Real paid rows are inconsistent:\n   - some show `付款开通`\n   - some show `付款`\n   - some show paid amount in the main amount column\n   - some hide the paid amount in long remarks instead\n4. Order remarks are carrying too much operational text (`承接：此前邀请码试用...`) and become the only place where critical facts are visible.\n\n## Why this matters\n\nThis is not just copy polish. It affects:\n\n- user understanding of what they paid for\n- finance/admin ability to reconcile records quickly\n- support ability to distinguish payment vs trial vs upgrade\n\n## Expected\n\n- user-side and admin-side statuses for the same order class should map consistently\n- trial handoff / trial quota records should be visually distinct from real paid money rows\n- real payment rows should show key facts in stable columns:\n  - order number\n  - status\n  - paid amount\n  - payment provider\n  - time\n  - plan / upgrade type\n- remarks should be supplemental, not the only place containing essential payment facts\n\n## Related feedback\n\nObserved during P0 regression around upgrade orders and Pro paid conversion after invite trial.\n\n## Priority\n\nP1. Not a same-day money-loss blocker by itself, but it directly affects support, finance, and user trust during paid launch.",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 95,
+      "created": "2026-05-13",
+      "updated": "2026-05-20",
+      "order": 1300,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-113",
+      "title": "[Bug] 多次使用的邀请码有兑换记录后无法删除，缺少强制停用手段",
+      "description": "## 问题描述\n\n删除邀请码时，系统提示「该邀请码已有兑换记录，不���删除」，只建议把过期时间改到今天来停用。\n\n这个逻辑对「一码一用」的邀请码是合理的——删了会影响已兑换用户的记录追溯。但对于**可多次使用的邀请码**，这个限制就有问题了：\n\n- 邀请码泄露了，想立刻作废，删不掉\n- 改过期时间是个 workaround，但不够直觉，运营不一定知道这个操作\n- 泄露场景下需要的是**立刻失效**，不是「改个时间等它过期」\n\n## 复现步骤\n\n1. 创建一个可多次使用的邀请码\n2. 至少有一个用户兑换过\n3. 尝试删除该邀请码\n4. 系统拒绝删除，提示「已有兑换记录，不能删除」\n\n## 期望行为\n\n对于可多次使用的邀请码，应提供**强制停用或删除**的能力：\n\n- 允许删除/作废，同时保留已有的兑换记录（软删除，不影响历史数据）\n- 或者提供一个明确的「立即停用」按钮，比藏在「改过期时间」里更直觉\n- 泄露场景下，操作后该码立刻不可用，已兑换的用户不受影响\n\n## 怀疑方向\n\n当前删除逻辑可能是一刀切地检查「有无兑换记录」，没有区分一码一用和一码多用的场景。建议排查：\n\n- 删除校验逻辑是否可以加一个分支：一码多用的邀请码允许软删除（标记失效但保留记录）\n- 或者独立出一个「停用」操作，跟「删除」分开，停用只让码失效不删数据",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 113,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 1400,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-109",
+      "title": "[Bug] 所有业务错误码需建立中文友好提示映射，禁止暴露 raw JSON",
+      "description": "> *原始 issue 只覆盖了 SUBSCRIPTION_EXPIRED 一个错误码，现扩展为系统性要求。*\n\n## 问题描述\n\n测试中发现，试用到期后客户端直接展示了原始 API 错误结构：\n\n```text\nFailed to authenticate. API Error: 403 {\"error\":{\"code\":\"SUBSCRIPTION_EXPIRED\",\"message\":\"Subscription is not active\"}}\n```\n\n这不是个例。Her-Web 返回的所有业务错误码（SUBSCRIPTION_EXPIRED、PROVIDER_REVOKED、TOKEN_INVALID、QUOTA_EXCEEDED 等），目前都缺乏系统性的中文友好提示映射。用户看到英文 + JSON 完全看不懂。\n\n## 复现路径（以 SUBSCRIPTION_EXPIRED 为例）\n\n1. 使用已过期的 Pro 试用账号登录客户端\n2. 发起一次模型请求\n3. 服务端返回 403，业务码 SUBSCRIPTION_EXPIRED\n4. 客户端消息气泡显示 raw JSON\n\n截图参考：测试记录 BUG-025\n\n## 期望行为\n\n**Her-Web 侧：**\n- 建立统一的业务错误码 → 中文提示的映射表\n- API 响应中同时返回 error code 和 user-facing 中文 message\n- 所有已知业务错误码都必须有对应的中文提示\n\n**映射示例：**\n\n| 错误码 | 中文提示 |\n|--------|---------|\n| SUBSCRIPTION_EXPIRED | 试用或订阅已到期，请续费后继续使用 |\n| PROVIDER_REVOKED | 服务通道已变更，请重新登录 |\n| TOKEN_INVALID | 登录已失效，请重新登录 |\n| QUOTA_EXCEEDED | 额度已用完，请充值后继续使用 |\n| RATE_LIMITED | 请求过于频繁，请稍后再试 |\n| ...（其他业务错误码） | ...（对应中文提示） |\n\n**客户端侧（her-salon 配合）：**\n- 优先展示中文 user-facing message\n- raw JSON / error code 仅放在可折叠详情或调试日志中，不作为主文案\n- 确保所有错误路径都经过友好提示映射，不能有漏网的 raw JSON\n\n## 初步定位\n\nHer-Web 侧已有结构化业务码：\n- `src/modules/usage/enforce.ts` 返回 SUBSCRIPTION_EXPIRED\n- `src/app/api/v1/models/route.ts` 也有 SUBSCRIPTION_EXPIRED 403\n\n客户端侧已有部分映射但不完整：\n- `salon/src/components/chat/InputBar.tsx` 有 `businessErrorMessage('SUBSCRIPTION_EXPIRED')`\n- `salon/src/hooks/useStreamProcessor.ts` 有部分友好错误分类\n\n测试中仍出现 raw JSON，说明至少有一条错误路径没进入友好映射。\n\n## 验收标准\n\n- [ ] Her-Web 建立完整的错误码 → 中文提示映射表\n- [ ] API 响应中包含 user-facing 中文 message 字段\n- [ ] 客户端所有错误展示路径都经过友好提示映射\n- [ ] 主 UI 不再暴露任何 raw JSON 或英文错误信息\n- [ ] 新增业务错误码时必须同步添加中文映射（作为开发规范）",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 109,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 1500,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-123",
+      "title": "[Bug] 付费 Pro 后试用清除侵蚀 Pro 额度（getPaidMaxRemainingQuota 不保护 Pro）",
+      "description": "## 问题\n\n用户从试用转为 Pro 付费后，`expireActiveInviteTrialQuotaAfterPaidConversion()` 清除试用额度时，会从 gateway 扣掉超过试用实际剩余的金额，侵蚀 Pro 订阅配额。\n\n## 复现场景\n\nzengyingmi@gmail.com（数据清理后状态）：\n- 试用 credit ¥2,000（remaining=2,000，reclassified from wallet）\n- Gateway ¥1,790（¥2,000 充入 - ¥210 已用）\n- 无订阅\n\n付费 Pro 月付（¥5,000）后：\n1. `topUpUserQuota()` +¥5,000 → gateway = ¥6,790\n2. `expireActiveInviteTrialQuotaAfterPaidConversion()`:\n   - `paidMaxProtected = getPaidMaxRemainingQuota()` → **0**（只查 Max，不查 Pro）\n   - `maxDeductible = max(0, 6790 - 0) = 6790`\n   - `gatewayDeducted = min(2000, 6790) = 2000`\n   - Gateway = 6790 - 2000 = **¥4,790**\n\n**结果**：用户付了 ¥5,000 Pro，但 gateway 只有 ¥4,790。少了 ¥210。\n\n## 对比 Max\n\n同样场景付费 Max（¥4,000）：\n- `paidMaxProtected = 4,000,000,000`（Max credit 受保护）\n- `maxDeductible = max(0, 5790 - 4000) = 1790`\n- `gatewayDeducted = min(2000, 1790) = 1790`\n- Gateway = 5790 - 1790 = **¥4,000**（精确）\n\nMax 没问题，Pro 有问题。\n\n## 根因\n\n`getPaidMaxRemainingQuota()`（service.ts:1018-1042）只查 `isPaidMaxCredit`（quotaKind=paid_max_monthly），**不包含 Pro credit**（paid_pro_periodic）。\n\n试用清除时的保护逻辑（service.ts:1084）：\n```typescript\nconst maxDeductible = Math.max(0, liveRemainQuota - paidProtectedQuota);\n```\n只保护 Max 额度，Pro 额度被当作\"可扣除\"的部分。\n\n## 修复建议\n\n把 `getPaidMaxRemainingQuota` 改为 `getPaidRemainingQuota`，同时包含 Pro 和 Max credit：\n\n```typescript\n// 改前：只保护 Max\n.filter((row) => isPaidMaxCredit(row))\n\n// 改后：保护所有付费额度\n.filter((row) => isPaidMaxCredit(row) || isPaidProCreditMetadata(row.metadata))\n```\n\n这样 Pro 和 Max 都受保护，试用清除不会侵蚀任何付费额度。\n\n## 影响范围\n\n- 所有从试用转 Pro 的用户（如果试用期间有 API 消耗）\n- Max 用户不受影响（已有保护）\n- 损失金额 = 试用期间的 API 消耗量（通常几十到几百元）",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 123,
+      "created": "2026-05-15",
+      "updated": "2026-05-20",
+      "order": 1600,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-137",
+      "title": "邀请码邮件发送 + 邮件模板中文品牌化 + 微信号自动回写",
+      "description": "# 邀请码邮件发送 + 邮件模板中文品牌化 + 微信号自动回写\n\n关联：#131（百人内测后端需求清单）\n\n## Problem Statement\n\n当前百人内测流程中，审核通过后需要手动分配邀请码并逐个发送，没有批量邮件发送能力。同时现有的验证邮件和重置密码邮件全是英文、缺乏品牌设计，用户注册后管理员需要手动录入微信号。整条链路存在大量人工操作。\n\n## Solution\n\n1. 建立统一的 Her 品牌邮件模板体系（中文），覆盖验证邮件、重置密码邮件、邀请码邮件\n2. 提供一次性脚本，从 CSV 读取审核通过名单，批量创建邀请码并通过 Resend 发送品牌邮件\n3. 用户兑换邀请码注册时，系统自动从邀请码关联数据中提取微信号写入用户资料\n\n## User Stories\n\n1. As 运营人员，I want 从飞书导出审核通过名单的 CSV，运行一个脚本就能批量创建邀请码并发送邮件，so that 不需要逐个手动操作\n2. As 运营人员，I want 脚本运行时可以指定邀请码的 tier、试用天数、有效期，so that 每批次可以灵活控制邀请码参数\n3. As 运营人员，I want 脚本执行后能看到每条记录的发送结果（成功/失败），so that 发送失败的可以手动补发\n4. As 用户，I want 收到的邀请码邮件是中文的、有 Her 品牌视觉风格的，so that 感受到产品的专业度和诚意\n5. As 用户，I want 邮件里能看到我的称呼、邀请码、去首页的链接、有效期提示，so that 清楚下一步该做什么\n6. As 用户，I want 注册时的验证邮件是中文的，so that 能看懂邮件内容\n7. As 用户，I want 找回密码邮件也是中文品牌风格的，so that 所有邮件体验一致\n8. As 管理员，I want 用户用邀请码注册后，微信号自动出现在用户详情页的微信号字段里，so that 不需要手动录入\n9. As 管理员，I want 邀请码的 note 字段存储了申请人的元数据（微信号、称呼），so that 后续可以追溯邀请码和申请人的关系\n10. As 开发者，I want 所有邮件模板共享一个品牌基础组件，so that 以后新增邮件类型不用重复写样式\n11. As 运营人员，I want 50-200 封邮件能可靠发送不被 Resend 限速拦截，so that 一批次能顺利完成\n\n## Requirements\n\n### R1: 品牌邮件基础组件\n\n- 新建 `src/core/email/templates/base-layout.tsx`，使用 React Email 组件库\n- 包含：渐变色顶部装饰条（复用现有 verify-email.tsx 的 accentBar 渐变色 `linear-gradient(90deg, rgba(99,102,241,1) 0%, rgba(236,72,153,1) 55%, rgba(14,165,233,1) 100%)`）、白色卡片容器、品牌 logo+名称行、底部 footer\n- 接受 props：`appName`（产品名）、`logoUrl`（logo 地址）、`children`（邮件正文内容）\n- 样式继承现有 verify-email.tsx 的设计语言（圆角卡片、阴影、字体栈）\n- 所有颜色值、间距、字体从现有 verify-email.tsx 的 styles 对象提取，作为基础组件的默认样式\n\n### R2: 验证邮件中文化\n\n- 修改 `src/core/email/templates/verify-email.tsx`，改为复用基础组件\n- 所有英文文案替换为中文：标题「验证你的邮箱」、正文「点击下方按钮验证你的邮箱地址，完成注册」、按钮「验证邮箱」、过期提示「此链接将在 24 小时后失效」、备用链接提示「如果按钮无法点击，请复制以下链接到浏览器打开」、footer「如果你没有请求此邮件，可以安全忽略」\n- `src/core/auth/index.ts` 中 `sendVerificationEmail` 的 subject 改为中文：`验证你的邮箱 - ${appName}`\n- Preview text 改为中文\n\n### R3: 重置密码邮件改造\n\n- 新建 `src/core/email/templates/reset-password.tsx`，使用 React Email 组件库，复用基础组件\n- 中文文案：标题「重置你的密码」、正文含用户称呼（有 name 用 name，无则用「你好」）、按钮「重置密码」、过期提示「此链接将在 1 小时后失效」、footer「如果你没有请求重置密码，可以安全忽略此邮件」\n- 修改 `src/core/auth/index.ts` 中 `sendResetPassword`：删除拼接 HTML 逻辑，改为使用 React Email 组件 + `provider.sendEmail({ react: ... })`\n- subject 改为中文：`重置你的密码 - ${appName}`\n\n### R4: 邀请码邮件模板\n\n- 新建 `src/core/email/templates/invite-code-email.tsx`，使用 React Email 组件库，复用基础组件\n- Props：`appName`、`logoUrl`、`recipientName`（称呼）、`inviteCode`（邀请码字符串）、`siteUrl`（首页链接，默认 `https://hersoul.cn`）、`expiresAt`（可选，有效期日期）\n- 占位文案结构（后续替换）：标题含称呼、欢迎语、邀请码展示区（大字号、等宽字体、可复制样式）、首页链接按钮、有效期提示（如果有 expiresAt）、使用说明（访问首页 → 注册 → 输入邀请码）\n- 邀请码展示区样式：背景色区分、大号等宽字体、letter-spacing 加宽，视觉突出\n\n### R5: 微信号自动回写\n\n- 当脚本创建邀请码时，`invite_code.note` 字段存储 JSON 格式的申请人元数据：`{\"wechat\":\"微信号\",\"name\":\"称呼\"}`\n- 修改 `src/modules/invite-codes/service.ts` 的 `redeemInviteCode` 函数：在事务内、更新 user 表的步骤中，解析 `freshCode.note`，如果是合法 JSON 且包含 `wechat` 字段，且当前用户的 `wechatId` 为空，则将 `wechat` 值写入 `user.wechatId`\n- 仅在 `user.wechatId` 为 null 或空字符串时写入，不覆盖已有值\n- note 不是合法 JSON 或没有 wechat 字段时静默跳过，不影响兑换流程\n- 不需要修改路由层（`/api/invite-codes/redeem` 和 `/api/invite-codes/complete-pending-signup`），因为两个路由都调用 `redeemInviteCode()`，改一处自动覆盖两个入口\n\n### R6: 批量发码脚本\n\n- 新建 `src/scripts/batch-send-invite-codes.ts`\n- 输入：CSV 文件路径（必需列：邮箱、称呼、微信号）+ 命令行参数（tier、trialDays、expiresAt）\n- 流程：读取 CSV → 逐行创建邀请码（调用 `createInviteCode`，note 存 `{\"wechat\":\"xxx\",\"name\":\"xxx\"}`）→ 逐个发送邮件（调用 Resend，使用邀请码邮件模板）\n- 限速：每封邮件间隔 200ms，避免触发 Resend 速率限制（50-200 封规模）\n- 发件地址：从环境变量 `RESEND_API_KEY` 和 `RESEND_EMAIL_FROM` 读取（与现有验证邮件共用配置）\n- 结果输出：控制台逐行打印 `[成功/失败] 邮箱 邀请码 错误原因`，最后汇总成功/失败数\n- Resend API Key 从环境变量读取，脚本不硬编码任何密钥\n- 使用 `tsx` 运行：`npx tsx src/scripts/batch-send-invite-codes.ts --csv path/to/file.csv --tier max --trial-days 15`\n- expiresAt 参数可选，格式 `YYYY-MM-DD`，不传则不设过期时间\n\n## Acceptance Criteria\n\n- [ ] AC1: 运行脚本，传入包含 3 条测试记录的 CSV，3 个邀请码被创建到数据库，3 封邮件发送成功（DB 查 `SELECT code, note FROM invite_code ORDER BY created_at DESC LIMIT 3`，Resend dashboard 确认发送）\n- [ ] AC2: 创建的邀请码 note 字段包含合法 JSON，含 wechat 和 name 字段（`SELECT note FROM invite_code WHERE code = 'XXX'`）\n- [ ] AC3: 使用该邀请码注册新用户，注册完成后 `user.wechat_id` 自动被填入（`SELECT wechat_id FROM \"user\" WHERE email = 'test@example.com'`）\n- [ ] AC4: 如果用户已有 wechat_id，兑换邀请码不会覆盖已有值\n- [ ] AC5: 注册验证邮件为中文内容、品牌视觉风格\n- [ ] AC6: 重置密码邮件为中文内容、品牌视觉风格（触发重置密码流程后检查收件箱）\n- [ ] AC7: 邀请码邮件包含称呼、邀请码（大号等宽字体）、首页链接、有效期提示\n\n## Future Considerations\n\n- 飞书多维表格后续会迁移到 Admin 后台的申请审核页面，届时脚本逻辑可改为 Admin 后台的「批量发送邀请码」按钮\n- 邮件模板后续可能需要支持多语言（当前只做中文）\n- 注册页可能后续支持 URL 参数预填邀请码（`?code=XXX`），当前明确不做\n- 邮件发送后续可能需要状态追踪（送达、打开、点击），当前不做\n\n## Implementation Decisions\n\n### Behavior Layer\n\n**品牌邮件基础组件**：提取为 `<BaseEmailLayout>` React Email 组件，封装所有共享样式（渐变条、卡片、logo 行、footer）。三个邮件模板（验证、重置密码、邀请码）都通过 `children` 注入各自的正文内容。这是一个深模块——复杂的样式细节被封装，对外接口简单。\n\n**微信号回写位置**：选择在 `redeemInviteCode()` 的事务内完成，而非在路由层。理由：\n1. `redeemInviteCode()` 事务内已有更新 user 表的步骤（写 herClubTier 等），加 wechatId 是自然扩展\n2. 两个路由入口（`/api/invite-codes/redeem` 和 `/api/invite-codes/complete-pending-signup`）都调用此函数，改一处自动覆盖\n3. 在事务内保证原子性——要么邀请码兑换+微信号回写都成功，要么都回滚\n\n**note 字段复用**：选择用现有 `invite_code.note` 字段存 JSON，而非新增数据库字段。理由：\n1. note 是 text 类型，可存任意格式\n2. 当前 note 默认为空字符串，没有其他结构化用途\n3. 不需要 schema migration\n4. 解析逻辑做防御性处理（非 JSON 静默跳过），兼容旧的非 JSON note 值\n\n**发件地址**：复用现有 `resend_email_from` 配置（从 settings 表或 env 读取），不新增发件地址。已有发送记录的域名声誉更好，减少进垃圾箱概率。\n\n### Module + Interface Layer\n\n| 文件 | 变更 |\n|------|------|\n| `src/core/email/templates/base-layout.tsx` | **新建**。导出 `BaseEmailLayout` 组件，props: `appName`, `logoUrl`, `children` |\n| `src/core/email/templates/verify-email.tsx` | **改造**。改为使用 `BaseEmailLayout`，所有文案改中文 |\n| `src/core/email/templates/reset-password.tsx` | **新建**。使用 `BaseEmailLayout`，props: `appName`, `logoUrl`, `url`, `userName` |\n| `src/core/email/templates/invite-code-email.tsx` | **新建**。使用 `BaseEmailLayout`，props: `appName`, `logoUrl`, `recipientName`, `inviteCode`, `siteUrl`, `expiresAt` |\n| `src/core/auth/index.ts` | **改造**。`sendVerificationEmail` subject 改中文；`sendResetPassword` 改为使用 React Email 组件 |\n| `src/modules/invite-codes/service.ts` | **改造**。`redeemInviteCode` 事务内新增：解析 freshCode.note JSON → 条件写入 user.wechatId |\n| `src/scripts/batch-send-invite-codes.ts` | **新建**。CLI 脚本 |\n\n### Locator Layer\n\n- 基础组件样式来源：`src/core/email/templates/verify-email.tsx:85-189`（styles 对象）\n- 验证邮件发送调用点：`src/core/auth/index.ts:214-215`（`sendEmail` with `react: VerifyEmail(...)`）\n- 重置密码邮件发送调用点：`src/core/auth/index.ts:167-175`（拼接 HTML 的 `sendEmail`）\n- Resend 配置读取：`src/core/auth/index.ts:205-213`（`all.resend_api_key`, `all.resend_email_from`）\n- redeemInviteCode 事务内 user 更新：`src/modules/invite-codes/service.ts:504-514`（已有 `tx.update(user).set(...)`)\n- createInviteCode 函数：`src/modules/invite-codes/service.ts:37-79`\n- invite_code schema：`src/config/db/schema.postgres.ts:576-593`\n- user schema wechatId 字段：`src/config/db/schema.postgres.ts:33`\n\n## Decisions\n\n### D1: note 字段存 JSON vs 新增 applicant 字段\n\n- **Context**: 需要在邀请码上关联申请人的微信号和称呼，以便兑换时自动回写\n- **Decision**: 复用现有 `invite_code.note` text 字段，存 JSON `{\"wechat\":\"xxx\",\"name\":\"xxx\"}`\n- **Alternatives**: 给 invite_code 表新增 `applicant_wechat` / `applicant_name` 字段 — 拒绝，因为需要 schema migration，且这是一次性脚本场景，不值得改表结构\n\n### D2: wechat_id 回写在 service 层 vs 路由层\n\n- **Context**: 兑换邀请码有两个路由入口，都需要触发微信号回写\n- **Decision**: 在 `redeemInviteCode()` 的事务内完成，一处改动覆盖两个入口\n- **Alternatives**: 在两个路由 handler 里分别添加回写逻辑 — 拒绝，因为重复代码且可能遗漏\n\n### D3: 注册页不加 URL 参数预填邀请码\n\n- **Context**: 邮件里可以放带 `?code=XXX` 的注册链接，用户免手动填码\n- **Decision**: 不加，邮件链接指向首页 `https://hersoul.cn`，邀请码在邮件中单独显示供用户复制\n- **Alternatives**: 注册页支持 `?code=XXX` 自动预填 — 用户明确选择不做\n\n### D4: 邮件品牌风格统一而非只做邀请码邮件\n\n- **Context**: 邀请码邮件需要品牌设计，但现有验证/重置密码邮件也是英文无设计\n- **Decision**: 一次性统一三种邮件的品牌风格和中文化\n- **Alternatives**: 只做邀请码邮件模板 — 用户明确要求全部一起做\n\n### D5: 发件地址复用现有配置\n\n- **Context**: 邀请码邮件需要确定 from 地址\n- **Decision**: 复用 `resend_email_from` 配置，与验证邮件共用\n- **Alternatives**: 新增专用邀请邮件发件地址如 `invite@hersoul.cn` — 拒绝，新地址没有域名声誉更容易进垃圾箱\n\n### D6: 邀请码邮件文案使用占位文案\n\n- **Context**: 用户表示邮件文案后续提供\n- **Decision**: 模板结构和样式先写好，使用合理的占位中文文案，后续替换\n- **Alternatives**: 等文案到了再写模板 — 拒绝，会阻塞其他模块开发\n\n## Risk Scenarios\n\n1. **redeemInviteCode 事务回滚风险**：新增的 wechatId 写入在事务内，如果 JSON 解析抛异常会导致整个兑换回滚。必须用 try-catch 包裹 JSON.parse，解析失败静默跳过\n2. **现有 note 字段兼容性**：已有邀请码的 note 可能是纯文本（如 `herclub:xxx`）或空字符串，JSON.parse 会失败。回写逻辑必须处理非 JSON 值\n3. **邮件模板改动影响验证流程**：修改 verify-email.tsx 和 sendResetPassword 是热路径，如果模板渲染出错会导致用户收不到验证/重置邮件。改动后必须实际触发一次验证邮件和重置密码邮件确认收到\n4. **Resend 批量发送限速**：Resend 免费版 100 封/天，付费版不同 plan 限速不同。脚本的 200ms 间隔适用于 50-200 封规模，但如果 Resend plan 限制更严需要调整。运行前应确认 Resend plan 限额\n5. **CSV 编码问题**：飞书导出的 CSV 可能是 GBK/GB18030 编码而非 UTF-8，脚本需要处理编码或在文档中说明要求 UTF-8\n6. **admin 后台 note 字段展示**：note 存 JSON 后，admin 邀请码列表页的 note 列会显示原始 JSON 字符串而非人类可读文本。这是可接受的降级——admin 能看到数据，只是不够美观\n\n## Testing Decisions\n\n- **必须测试**：`redeemInviteCode` 的 wechatId 回写逻辑\n  - 场景 1：note 是合法 JSON 含 wechat 字段，user.wechatId 为空 → 写入成功\n  - 场景 2：note 是合法 JSON 含 wechat 字段，user.wechatId 已有值 → 不覆盖\n  - 场景 3：note 是纯文本（非 JSON）→ 静默跳过，兑换正常完成\n  - 场景 4：note 是空字符串 → 静默跳过，兑换正常完成\n  - 场景 5：note 是 JSON 但没有 wechat 字段 → 静默跳过\n- **手动验证**：邮件模板渲染效果（收到的实际邮件外观）、脚本端到端运行\n- **现有测试参考**：`src/modules/entitlements/entitlements.test.ts` 是现有的 service 层单测范例\n\n## Definition of Done\n\n- `redeemInviteCode` wechatId 回写单测通过\n- TypeScript 类型检查通过（`pnpm typecheck` 或等效命令）\n- 三个邮件模板可以 render 不报错\n- 脚本可以 dry-run（读 CSV + 创建邀请码，不实际发邮件的模式可选）\n- 实际发送一封测试邀请码邮件到真实邮箱，确认收到且样式正确\n- 实际触发一次验证邮件，确认中文内容和品牌样式\n- 实际触发一次重置密码邮件，确认中文内容和品牌样式\n\n## E2E Verification Environment\n\n- **邮件验证**：Resend dashboard 查看发送记录 + 真实邮箱收件箱检查\n- **数据库验证**：本地 dev 数据库 或 生产数据库 psql\n- **脚本运行**：本地 `npx tsx` 执行\n- 验证清单：\n  - [ ] AC1: `npx tsx src/scripts/batch-send-invite-codes.ts --csv test.csv --tier basic --trial-days 3` → 控制台输出 3 条成功 → `SELECT code, note FROM invite_code ORDER BY created_at DESC LIMIT 3` 确认 3 条记录\n  - [ ] AC2: `SELECT note FROM invite_code WHERE code = '{上一步输出的code}'` → 返回合法 JSON 含 wechat 和 name\n  - [ ] AC3: 用测试邮箱 + 上一步的邀请码注册 → `SELECT wechat_id FROM \"user\" WHERE email = '{测试邮箱}'` → 返回 CSV 中对应的微信号\n  - [ ] AC4: 手动设置 user.wechat_id 为非空值 → 再次兑换（需要新码）→ 确认 wechat_id 未被覆盖\n  - [ ] AC5: 注册过程中检查收到的验证邮件 → 中文、品牌视觉\n  - [ ] AC6: 触发重置密码 → 检查邮件 → 中文、品牌视觉\n  - [ ] AC7: 检查 AC1 发出的邀请码邮件 → 含称呼、邀请码、首页链接\n\n## Knowledge Base References\n\n- CONTEXT.md: `CONTEXT.md` — Trial Credit 术语、邀请码域概念\n- ADR: `docs/adr/0001-three-pool-quota-model.md` — 三池模型，邀请码兑换会创建 Trial Credit\n\n## Out of Scope\n\n- Admin 后台申请审核页面（飞书迁移到后台）\n- 注册页 URL 参数预填邀请码（`?code=XXX`）\n- 邮件多语言支持（当前只做中文）\n- 邮件送达/打开/点击追踪\n- 飞书 webhook 自动触发发码\n- 注册邮箱与邀请码绑定校验（#131 第 6 项，当前不做）\n- 邀请码批量导出功能（#131 第 1 项）\n- 已使用邀请码跳转用户详情页（#131 第 2 项）\n\n## Further Notes\n\n- 邀请码邮件文案为占位内容，用户后续提供正式文案后替换 `src/core/email/templates/invite-code-email.tsx` 中的文案即可\n- 脚本是一次性工具，不需要做成 API endpoint\n- 关联 issue #131 是百人内测综合需求清单，本 PRD 只覆盖其中的邮件发送 + 微信号回写 + 邮件中文化部分",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 137,
+      "repo": "her-web",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 1700
+    },
+    {
+      "id": "gh-her-web-132",
+      "title": "[Bug] 额度增减时间不对称：充值立即加额度，退订/到期扣额度延迟十几小时",
+      "description": "## 问题描述\n\n用户取消订阅或订阅到期后，Gateway 侧的额度扣减需要等十几个小时才同步执行；但用户充值/订阅时，额度是立刻同步增加的。\n\n这个时间窗口意味着：用户退订后仍可在数小时内继续消耗额度，造成实际额度超发。\n\n## 复现步骤\n\n1. 用户订阅 Pro，额度立即增加到 Gateway\n2. 用户取消订阅（或订阅自然到期）\n3. 观察 Gateway 侧额度 — 十几个小时后才被扣减\n4. 在这十几个小时的窗口内，用户仍可消耗已退订的额度\n\n## 期望行为\n\n退订/到期后的额度扣减应与充值时的额度增加保持对称的时效性，避免出现可被利用的时间窗口。",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 132,
+      "repo": "her-web",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 1800
+    },
+    {
+      "id": "gh-her-salon-55",
+      "title": "发布流程 / Her-s 后续发布改为 macOS-only",
+      "description": "## What to build\n把 Her-s 发布策略固化为 macOS-only，避免后续 release 流程继续构建、镜像、验证或要求 Windows 产物。\n\n## Acceptance criteria\n- [ ] Her-s release profile 只包含 `aarch64-apple-darwin` 和 `x86_64-apple-darwin` 构建目标。\n- [ ] mirror/platform 配置只包含 `darwin-aarch64` 和 `darwin-x86_64`。\n- [ ] 发布计划/治理文档不再要求 Windows NSIS、`.exe` 或 Windows updater 条目。\n- [ ] updater manifest 生成或发布验证不会因为缺少 Windows 产物失败。\n- [ ] 明确记录 Her-s 从此 macOS-only；Windows 客户端兼容代码不在本 issue 范围内。\n\n## Blocked by\n- None\n\n## Related\n- #54 removes the public Windows download entry from the release page.\n\n## Notes\nThe release policy change should stay scoped to Her-s / Her Beta. Do not remove general Windows compatibility code from runtime paths, file path handling, or historical docs unless they directly affect publishing future Her-s releases.",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 55,
+      "repo": "her-salon",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 1900
+    },
+    {
+      "id": "gh-her-salon-54",
+      "title": "发布页 / 删除 Windows 下载入口",
+      "description": "## What to build\n将 Her Beta 发布页改为 macOS-only 下载体验，删除 Windows 下载选项和 Windows 自动识别分支。\n\n## Acceptance criteria\n- [ ] `deploy/her-beta/index.html` 不再展示 Windows 下载选项。\n- [ ] `DOWNLOADS` 配置不再包含 Windows `.exe`。\n- [ ] Windows 浏览器访问发布页时默认落到 macOS 下载选项，而不是 Windows。\n- [ ] 下载可用性检测只检查 macOS Apple Silicon 和 macOS Intel。\n- [ ] 页面交互仍可在两个 Mac 包之间切换。\n\n## Blocked by\n- None\n\n## Notes\nThis is a page-only release surface cleanup. Do not remove Windows compatibility code from the app in this issue.",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 54,
+      "repo": "her-salon",
+      "created": "2026-05-20",
+      "updated": "2026-05-20",
+      "order": 2000
+    },
+    {
+      "id": "gh-her-web-145",
+      "title": "注册流程错误提示不区分原因，统一显示「操作失败，请稍后再试」",
+      "description": "## 问题描述\n\n用户在注册流程中遇到各类错误时，页面统一显示「操作失败，请稍后再试」，无法区分具体原因。用户不知道是自己的问题还是系统的问题，会反复尝试或直接放弃。\n\n百人内测今天上线，新用户注册是第一个触点，这里的体验直接影响留存。\n\n## 复现步骤\n\n**场景 1：邮箱已注册**\n1. 用一个已注册过的邮箱 + 有效邀请码提交注册\n2. 页面显示「操作失败，请稍后再试」\n3. 用户不知道是邮箱重复了\n\n**场景 2：邀请码已被使用（一码一用）**\n1. 用一个已被兑换的一码一用邀请码注册\n2. 页面显示「操作失败，请稍后再试」\n3. 用户不知道是码的问题\n\n**场景 3：邀请码无效/过期**\n1. 输入一个不存在或已过期的邀请码\n2. 页面显示「操作失败，请稍后再试」\n3. 用户不知道是码错了还是系统挂了\n\n## 期望行为\n\n针对不同错误原因显示明确的中文提示：\n\n| 错误原因 | 期望提示 |\n|---------|---------|\n| 邮箱已注册 | 该邮箱已注册，请直接登录或使用其他邮箱 |\n| 邀请码已被使用 | 该邀请码已被使用 |\n| 邀请码不存在 | 邀请码无效，请检查后重试 |\n| 邀请码已过期 | 该邀请码已过期 |\n| 真正的系统错误 | 操作失败，请稍后再试（只有这种情况才用） |\n\n## 关联\n\n- #109（所有业务错误码需建立中文友好提示映射）是同类问题但覆盖 API 调用场景，本 issue 专指注册流程",
+      "priority": "P1",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "needs-triage"
+      ],
+      "github": 145,
+      "repo": "her-web",
+      "created": "2026-05-21",
+      "updated": "2026-05-21",
+      "order": 2100
+    },
+    {
+      "id": "gh-her-web-16",
+      "title": "security: checkout trusts client-supplied credits + webhook/callback race causes double-crediting",
+      "description": "## Summary\n\nCodex gpt-5.5 安全审查在 issue #13 修复过程中发现的两个 **pre-existing** critical 安全问题。\n\n## Finding 1（Critical）：checkout 信任客户端传的 credits 金额\n\n**位置**: `src/app/api/payment/checkout/route.ts`, `src/modules/payment/service.ts:150-161, 350, 382`\n\n**攻击场景**: 认证用户 POST checkout body 时可自行指定 `price` 和 `credits`。支付成功后，`creditsAmount` 直接用于 credit grant 和 `topUpUserQuota`。攻击者可以支付极小金额但设置极大 credits。\n\n**修复方向**: 不信任客户端传的 `price`/`credits`/`plan`/`product_name`。仅接受 server-side 的 `product_id` / price id，从 `src/config/plans.ts` 或 DB 加载计划，server-side 派生金额、货币、周期、credits、有效期。\n\n## Finding 2（Critical）：浏览器回调和 webhook 并发导致同一笔订单双重充值\n\n**位置**: `src/modules/payment/service.ts:177-256, 374, 382`\n\n**攻击场景**: 浏览器回调和 provider webhook 可并发处理同一笔成功订单。两个请求都读到 `CREATED`/`PENDING` 状态，都插入 credit 行，都调用 `topUpUserQuota`，导致一笔支付双重充值。\n\n**修复方向**: 原子性地 claim 订单后再执行 side effects（如 `UPDATE order SET status='processing' WHERE id=? AND status IN ('created','pending') RETURNING *`），只有赢家执行 credit insert 和 gateway top-up。配合唯一 grant id / orderNo 做幂等。\n\n## 附加发现（Important）\n\n- **quotaGranted lost-update 竞态**: `src/modules/api-gateway/service.ts:306-321`，并发 top-up 读同一个 `binding.quotaGranted` 再写回，最后写入者覆盖前者。应改用原子 DB 增量 `quota_granted = quota_granted + add`。\n- **quota 列 32-bit integer 溢出风险**: `QuotaPerUnit=500000`，大额充值可能逼近 signed 32-bit 上限。应改用 `bigint`/`numeric` 并在 checkout 创建前强制上限校验。\n\n## 来源\n\nCodex gpt-5.5 code-security-review，审查 issue #13 gateway quota accounting bugfix 时追踪调用链发现。完整审查报告在 `.trellis/tasks/04-27-issue-13-gateway-quota-bugs/review-code-security-20260427.md`。",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-human"
+      ],
+      "github": 16,
+      "created": "2026-04-27",
+      "updated": "2026-05-20",
+      "order": 2200,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-salon-21",
+      "title": "[Design] Conversation file references and preview resolution",
+      "description": "## 问题描述\n\n对话中 Agent 返回的文件引用链接（如 `PRD-v2.md`、`SimpleOverlayView_v2.swift`），点击后右侧预览面板显示 `// Error loading file`，无法加载文件内容。文件实际存在于磁盘上，路径正确。\n\n## 复现步骤\n\n1. 在 TOKENICODE 客户端中与 Agent 对话\n2. Agent 在回复中生成文件引用链接（例如通过 Write/Edit 工具创建或修改文件后自动生成的链接）\n3. 点击对话中的文件链接（如 `PRD-v2.md`）\n4. 右侧预览面板顶部显示文件名和 `1 行`，内容区域显示 `// Error loading file`\n\n## 期望行为\n\n点击文件链接后，右侧预览面板应正常加载并展示文件内容（Markdown 渲染或代码高亮）。\n\n## 怀疑方向\n\n- **文件路径解析问题**：Agent 返回的文件路径可能是绝对路径，预览组件可能期望相对路径，或者路径中包含中文/特殊字符（工作区路径为 `夙愿's库`）导致解析失败\n- **文件读取权限 / Tauri fs scope**：预览面板的文件读取可能受 Tauri 的 `fs` scope 限制，工作区外或特定目录下的文件未被授权访问\n- **预览组件加载逻辑**：显示 `1 行` 说明可能拿到了部分元信息但实际内容读取失败，建议排查预览组件的文件读取链路（IPC 调用 → Rust 端 `read_file` → 返回内容）\n\n## 截图\n\n（图床 COS 欠费暂时无法上传，截图本地路径：`.tokenicode/tmp/image_17781652364611.png`）\n\n截图内容描述：对话中有两个文件链接 `PRD-v2.md` 和 `SimpleOverlayView_v2...`，点击 PRD-v2.md 后右侧面板标题显示「PRD-v2.md 1 行」，下方显示「// Error loading file」。预览/编辑 tab 切换可见。\n\n## 环境信息\n\n- 客户端：TOKENICODE（Opus 4.6，1M context）\n- 工作区路径含中文和特殊字符：`/Users/suyuan/Documents/夙愿's库`\n- macOS",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 21,
+      "repo": "her-salon",
+      "created": "2026-05-07",
+      "updated": "2026-05-20",
+      "order": 2300
+    },
+    {
+      "id": "gh-her-web-66",
+      "title": "[Bug] 试用账户无法延长试用期或取消试用——管理后台只支持调整订阅",
+      "description": "## 问题描述\n\n管理后台目前只能对「订阅」类型的用户进行调整（延长、取消等）。但试用（trial）不属于订阅，导致试用账户在后台**无法延长试用期，也无法取消试用**。\n\n运营场景中经常需要对试用用户做操作：比如给某个用户多几天试用时间，或者手动结束试用转为正式。目前只能干看着，没有入口。\n\n## 复现步骤\n\n1. 在管理后台找到一个试用中的用户\n2. 尝试延长其试用期 → 没有可操作的入口\n3. 尝试取消试用 → 同样没有入口\n\n## 期望行为\n\n管理后台能对试用账户进行以下操作：\n\n- **延长试用期**：修改试用到期时间\n- **取消试用**：手动结束试用状态（降为免费 or 转为付费）\n\n## 怀疑方向\n\n后台的用户管理模块在设计时，只建模了「订阅」这一种付费状态的管理操作。试用（trial）作为一种独立的状态，缺少对应的管理接口和 UI 入口。建议排查：\n\n- 用户状态模型中 trial 和 subscription 是否共用同一套操作逻辑，还是 trial 被遗漏了\n- 后台 API 层是否有 trial 相关的 endpoint，只是前端没有接入；还是后端也没有实现",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 66,
+      "created": "2026-05-09",
+      "updated": "2026-05-20",
+      "order": 2400,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-77",
+      "title": "提供 HerClub 显示值 API 参考表给客户端",
+      "description": "## 背景\n\nHerClub 的 tier 值已从旧命名（premium/vip）迁移到新命名（max/basic），客户端显示值需要同步更新。目前客户端显示有问题。\n\n## 当前数据库字段值\n\n### `herClubTier`（用户表 `her_club_tier`）\n| 值 | 含义 | 显示建议 |\n|----|------|---------|\n| `max` | HerClub 最高权益 | \"HCLUB\" 或 \"HerClub Max\" |\n| `basic` | 基础权益 | 待定 |\n| `null` | 无 HerClub | 不显示 |\n\n### `herClubSource`（用户表 `her_club_source`）\n| 值 | 含义 | 是否显示 HCLUB 徽章 |\n|----|------|-------------------|\n| `herclub_purchase` | 付费购买 77 元 | 显示 |\n| `invite_code` | 邀请码试用 | 不显示 |\n| `manual` / `admin` | 管理员手动授予 | 显示 |\n| `null`（空） | 早期数据 | 显示 |\n\n### 徽章显示规则\n```\n显示 HCLUB 徽章 = herClubTier != null AND herClubSource !== 'invite_code'\n```\n\n### `herClubIdentity`（API 返回字段）\n| 字段 | 含义 |\n|------|------|\n| `herClubIdentity.isMember` | 是否有活跃会员卡（herclub_member 表中有记录） |\n\nAdmin 页面用 `isMember` 判断徽章显示，客户端也应以此为准。\n\n## 相关 API\n\n- `GET /api/user/info` — 返回当前用户信息，含 `herClubTier`、`herClubSource`\n- `GET /api/admin/users` — 用户列表，含 `herClubTier`、`herClubSource`、`herClubIdentity`\n- `GET /api/admin/users/:id` — 用户详情，含 `herClubIdentity.isMember`\n\n## 需要客户端做的\n\n1. 更新 tier 值映射（如果还在硬编码 premium/vip）\n2. 徽章显示逻辑对齐：使用 `herClubIdentity.isMember` 或 `herClubSource !== 'invite_code'`\n3. 确认所有显示 HerClub 相关信息的页面都用了正确的字段",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 77,
+      "created": "2026-05-11",
+      "updated": "2026-05-20",
+      "order": 2500,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-91",
+      "title": "chore: telemetry security hardening (5 Codex review items)",
+      "description": "**Source**: Codex review PR #76 (5 items for 小七姐/Tiny)\n\n### Items\n\n1. **P1 dev-auth.ts**: Dev mode accepts any request with `x-her-internal-telemetry: 1` header without real auth. Consider requiring a shared secret via env var.\n\n2. **P2 archive/route.ts**: Import (POST) uses `admin.users.read` permission, same as export. Should use a write-specific permission.\n\n3. **P3 service.ts:349**: Snapshot size limit uses `rawJsonl.length` (JS string length) instead of `Buffer.byteLength(rawJsonl, 'utf8')`. Non-ASCII content can exceed the 5MB byte limit.\n\n4. **P2 service.ts:1586**: Analytics endpoint loads ALL `raw_jsonl` snapshots without date/session filter, even for `days=1`. Will cause OOM as data accumulates.\n\n5. **P3 service.ts:331**: No per-event payload size cap. Each event payload is serialized directly to JSONB with no byte limit.\n\n### Already fixed in current code\n- Non-Postgres provider compatibility (memory store fallback)\n- Snapshot timestamp comparison (prevents regression)\n- Rate limiter cookie hash (partial user isolation)\n\n**Owner**: @yiliqi78 / Tiny",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 91,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 2600,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-90",
+      "title": "fix: WeChat webhook signature cryptographic verification",
+      "description": "**Source**: Codex review PR #82, item #6 (P1)\n\n**Problem**: `Wechatpay-Signature` header is only checked for existence, not cryptographically verified. The code comments acknowledge this: 'For now we decrypt the resource and trust the HTTPS channel.'\n\n**Risk**: An attacker with a captured notification body can replay it with a fresh timestamp. AES-GCM decryption succeeds because the HTTP timestamp is not authenticated.\n\n**Fix**: Implement RSA-SHA256 signature verification using the WeChat platform certificate. This requires:\n1. WeChat platform certificate management (download + cache + rotation)\n2. Verify `timestamp\\\\nnonce\\\\nbody\\\\n` against the signature using the platform public key\n\n**File**: `src/core/payment/wechat.ts:165-187`\n\n**Note**: This is a significant work item requiring platform certificate infrastructure.",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-human"
+      ],
+      "github": 90,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 2700,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-89",
+      "title": "fix: move rate limiter before auth in order sync",
+      "description": "**Source**: Codex review PR #82, item #4 (P2)\n\n**Current state**: Rate limiter runs after authentication in `/api/user/billing/orders/[orderNo]/sync`. The orderNo validation is in place (empty orderNo returns early), and the key uses `userId:orderNo`.\n\n**Codex concern**: Unauthenticated requests bypass rate limiting entirely, allowing unbounded requests to the auth layer.\n\n**Note**: Current ordering (auth first) prevents unauthenticated users from occupying limiter buckets, which has its own merit. Low priority.\n\n**File**: `src/app/api/user/billing/orders/[orderNo]/sync/route.ts:11-25`",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 89,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 2800,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-88",
+      "title": "decision: payment amount 95% acceptance threshold",
+      "description": "**Source**: Codex review PR #82, item #2 (P2)\n\n**Current behavior**: `MIN_ACCEPTED_PAYMENT_RATIO = 0.95` allows up to 5% underpayment.\n\n**Codex concern**: An order at ¥3,500 accepts ¥3,325 as valid payment.\n\n**Context**: This was intentionally set to handle currency conversion rounding and provider fee differences. Need to decide if this tolerance is acceptable or should be tightened.\n\n**File**: `src/modules/payment/service.ts:37`",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "ready-for-human"
+      ],
+      "github": 88,
+      "created": "2026-05-12",
+      "updated": "2026-05-20",
+      "order": 2900,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-94",
+      "title": "P2: Clarify zero-price Pro Yearly -> Max Monthly upgrade and internal payment label",
+      "description": "## Problem\n\nIn manual regression, a user completed this sequence:\n\n1. Bought `Pro Monthly` for `¥1299`\n2. Upgraded to `Pro Quarterly` for `¥2100`\n3. Upgraded to `Pro Yearly` for `¥9600`\n4. While `Pro Yearly` was active, upgraded to `Max Monthly`\n\nThe last step completed with **no payment required** and surfaced as `其他支付方式` / internal payment-like behavior.\n\n## Why this is confusing\n\nThis may be a valid zero-price upgrade when the remaining paid value of the yearly Pro subscription exceeds the Max monthly price. However, the current UI does not explain that.\n\nFrom the user's point of view it looks like:\n\n- Max became active without an obvious payment step\n- payment provider shows as `其他支付方式`\n- there is no clear explanation that the remaining Pro yearly value fully covered the Max upgrade\n\n## Expected\n\nIf zero-price upgrade is an intended behavior:\n\n- show explicit wording such as \"remaining subscription value fully covered this upgrade\"\n- label the payment/order method as `internal upgrade` or similar instead of `其他支付方式`\n- make the billing/order timeline distinguish this from an ordinary paid payment\n\nIf zero-price upgrade is **not** intended for this path, then the upgrade pricing logic is wrong and should be corrected.\n\n## Current assessment\n\nThis does **not** currently look like a P0 launch blocker because it is not evidence of wrong charging or missing entitlement. It is a clarity / presentation issue unless product decides zero-price yearly->max upgrade should never happen.",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 94,
+      "created": "2026-05-13",
+      "updated": "2026-05-20",
+      "order": 3000,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-110",
+      "title": "[功能] 管理后台同步展示失败日志，不只显示成功记录",
+      "description": "## 问题描述\n\n目前 Her-Web 管理后台只展示用户的成功调用日志，失败的请求日志没有同步过来。运维排查问题时，只看到成功记录，看不到失败记录，无法理解用户遇到了什么问题、失败了多少次、报了什么错。\n\n## 期望行为\n\n- 管理后台的用户日志页面同时展示**成功和失败**的调用记录\n- 失败记录需包含：时间、请求的模型、错误码、错误信息\n- 能按状态筛选（全部 / 成功 / 失败）\n- 失败记录醒目标识（比如红色标记），方便快速定位问题",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "ready-for-agent"
+      ],
+      "github": 110,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 3100,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-106",
+      "title": "[功能] 系统公告/停机通知接口，支持客户端实时获取",
+      "description": "## 问题描述\n\n目前没有机制在停机维护前通知用户。用户正在使用时如果突然断了，体验很差。需要 Her-Web 提供一个系统消息/公告接口，客户端可以拉取并实时展示。\n\n## 期望行为\n\n**Her-Web 侧：**\n- 暴露一个公告/通知 API 端点，客户端定时轮询或长连接获取\n- 后台可以创建系统公告（停机通知、维护窗口、版本更新等）\n- 公告支持设置生效时间段（比如「5 月 15 日 22:00-23:00 停机维护」）\n\n**客户端侧（her-salon 配合）：**\n- 定时拉取通知接口，有新公告时实时展示给用户\n- 停机通知在用户正在使用时以醒目方式呈现（比如顶部横幅），不能只藏在设置页里\n- 用户能看到预计恢复时间\n\n**核心场景：**\n1. 运维在后台发布停机公告 → 客户端收到并展示 → 用户提前知道，做好准备\n2. 用户正在对话中 → 收到即将停机的提醒 → 可以保存当前工作",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 106,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 3200,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-104",
+      "title": "[功能] Gateway 与 Her-Web 生产环境隔离 + 测试环境梳理",
+      "description": "## 问题描述\n\n目前 her-gateway 和 Her-Web 在生产环境上没有做隔离。两个服务共享环境，修改 Her-Web 业务逻辑时有可能影响到 gateway 的稳定性，反之亦然。\n\nGateway 是用户调用 AI 模型的核心链路，任何中断直接影响用户体验。业务侧的迭代部署不应该有机会波及到它。\n\n此外，整个测试环境也需要重新梳理——目前缺乏清晰的环境隔离，开发测试容易污染生产数据或配置。\n\n## 期望行为\n\n**生产环境隔离：**\n- her-gateway 和 Her-Web 在部署、数据库、配置层面做隔离\n- Her-Web 的发布/重启不影响 gateway 的服务可用性\n- Gateway 的变更走独立的发布流程\n\n**测试环境梳理：**\n- 建立独立的测试/staging 环境\n- 测试环境与生产环境完全隔离（数据库、API 通道、配置）\n- 明确各环境的用途和边界",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 104,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 3300,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-103",
+      "title": "[功能] Pro 和 Max 订阅页面分离，避免每次请求刷新 Max 权限",
+      "description": "## 问题描述\n\n当前 Pro 和 Max 的订阅页面没有区分开。每次加载订阅页时，都会去判断用户是否有 Max 订阅权限并请求刷新，即使用户只是 Pro 用户也会触发这个逻辑。\n\n这带来不必要的请求开销，也增加了权限判断出错的风险（参见 #64 Pro 用户能用 Max 模型的问题，可能与此有关）。\n\n## 期望行为\n\n- Pro 和 Max 的订阅页面在前端路由/组件层面分离\n- Pro 用户进入订阅页时，不触发 Max 权限的检查和刷新逻辑\n- 只有在用户实际需��查看或操作 Max 订阅时，才请求 Max 相关的权限数据",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "github": 103,
+      "created": "2026-05-14",
+      "updated": "2026-05-20",
+      "order": 3400,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-122",
+      "title": "[Bug] 试用额度用完但未过期时，试用卡片消失",
+      "description": "## 问题\n\n当一个用户的试用额度满足以下条件时，billing 页面的试用卡片不会显示：\n\n1. `remaining_credits = 0`（试用额度已用完）\n2. `expires_at = NULL`（迁移遗留，没设过期时间）\n3. `trial_ends_at` 仍在未来（试用期还没到）\n\n## 根因\n\n两个函数都不匹配：\n\n- `getActiveTrialCreditSummary`（service.ts:210）：要求 `remaining_credits > 0` → 用完了不算「活跃」\n- `getExpiredTrialCreditSummary`（service.ts:232）：要求 `expiresAt <= now` → NULL 不满足；fallback 要求 `trial_ends_at <= now` → 没到期也不满足\n\n→ 既不是「活跃」也不是「已过期」→ 卡片隐藏\n\n## 影响\n\n- 当前只影响 ann0209@foxmail.com（5/15-5/17 两天）\n- 5/17 trial_ends_at 到期后 fallback 自动触发，卡片恢复显示「已过期」\n- 用户是付费 Pro，不影响使用\n\n## 修复建议\n\n`getExpiredTrialCreditSummary` 的 fallback 逻辑增加一个分支：当所有 trial credit 的 `remaining_credits = 0` 时，即使 trial 未到期，也应该显示（可以显示为「已用完」或「已过期」）。",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 122,
+      "created": "2026-05-15",
+      "updated": "2026-05-20",
+      "order": 3500,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-127",
+      "title": "[Bug] 官网 / 管理员控制台用户详情页：试用与订阅会员额度显示规则不统一",
+      "description": "## 问题描述\n\n管理员控制台用户详情页中，试用会员和订阅会员的额度呈现规则不一致：\n\n- **试用会员**：显示「剩余 / 总额度」\n- **订阅会员**：显示「已使用 / 总额度」\n\n同一页面、同一数据维度，呈现方式不统一。\n\n## 期望行为\n\n统一按「已使用 / 总额度」显示。\n\n## 实际行为\n\n两种会员身份各自用不同的呈现规则。\n\n## 环境信息\n\n| 项目 | 值 |\n|------|-----|\n| 发生入口 | 官网 / 管理员控制台 |\n| 页面 | 用户详情页 |\n\n## 截图\n\n试用会员额度显示（剩余/总额度）：\n\n![试用会员额度显示（剩余/总额度）](https://github.com/user-attachments/assets/b983e0f0-2e4f-4185-9429-fff86838c398)\n\n订阅会员额度显示（已使用/总额度）：\n\n![订阅会员额度显示（已使用/总额度）](https://github.com/user-attachments/assets/d8decc44-d84a-49c7-8292-2a267611aa11)",
+      "priority": "P2",
+      "column": "ready",
+      "tags": [
+        "bug",
+        "ready-for-agent"
+      ],
+      "github": 127,
+      "created": "2026-05-17",
+      "updated": "2026-05-20",
+      "order": 3600,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-salon-27",
+      "title": "[功能] 客户端 / 支持从微信内嵌网页批量提取并下载图片",
+      "description": "## 需求描述\n\n用户希望 Her 能帮助从「只能在微信内打开的网页」中批量提取并下载图片。\n\n这类网页（家校平台、教培平台等）通常依赖微信 OAuth 鉴权，图片托管在公开 CDN，但获取图片列表的 API 必须在微信内嵌浏览器中完成登录后才能访问。用户在微信外无法复现 OAuth 流程，导致图片被锁在 WebView 里无法导出。\n\n## 使用场景\n\n用户孩子在杨梅红国际艺术学校学了两年多，419 幅画作存在家校圈平台（jxq.xiaogj.com）。平台页面只能在微信内打开，Safari/Chrome 打开会黑屏，macOS 的沙盒机制也挡住了 Safari 调试 WeChat WebView 的路径。用户花了一整天也无法拿到图片的下载地址。\n\n这类场景在家长群体中具有普遍性——家校类、教培类平台大量基于微信生态，孩子的画作、照片、成长记录都被锁在微信 WebView 里。\n\n## 期望方案\n\n可能的方向（供开发评估）：\n\n- 引导用户配置 mitmproxy/Charles 拦截微信流量，提取图片地址\n- 提供专用的微信网页图片导出辅助流程\n- 其他能够绕开微信 WebView 限制、批量导出图片的方案",
+      "priority": "P2",
+      "column": "done",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 27,
+      "repo": "her-salon",
+      "created": "2026-05-19",
+      "updated": "2026-05-21",
+      "order": 3700
+    },
+    {
+      "id": "gh-her-salon-26",
+      "title": "[功能] 客户端 / 增加引用对话功能（微信式引用 + AI 上下文传递）",
+      "description": "## 需求描述\n\n增加引用回复功能，允许用户引用对话历史中的任意一条消息（自己的或 AI 的），并在发送时将引用内容及其关联上下文传递给 AI。\n\n## 使用场景\n\n用户经常需要指代之前对话中的某一条具体内容，目前的做法是在输入框里用模糊描述（如\"上次你提到一个什么\"），既不精准也不方便。引用功能让用户可以：\n\n- 精准定位到某条历史消息\n- AI 收到引用后能获取该消息及其上下文，给出更准确的回应\n- 长对话场景下大幅降低沟通成本\n\n## 期望方案\n\n### UI 交互层\n- 类似微信的引用交互：长按/右键某条消息 → 选择「引用」→ 输入框上方出现引用预览条（显示被引用消息摘要）\n- 发送后，引用内容以引用块的形式展示在消息气泡中\n- 所有消息（用户 + AI）都可以被引用\n\n### AI 上下文层\n- 用户引用某条消息并发送时，系统需要将该条消息及其前后关联上下文（而非仅引用文本本身）传递给 AI\n- 这样 AI 能理解引用内容所在的完整对话语境，而不仅仅是被引用的那一句话\n\n## 补充信息\n\n核心价值不是 UI 交互本身，而是**精准引用 + AI 上下文感知**的结合。用户引用的真正诉求是\"让 AI 知道我说的是哪一段话、在什么语境下说的\"。",
+      "priority": "P2",
+      "column": "done",
+      "tags": [
+        "enhancement"
+      ],
+      "github": 26,
+      "repo": "her-salon",
+      "created": "2026-05-19",
+      "updated": "2026-05-21",
+      "order": 3800
+    },
+    {
+      "id": "gh-herclub-1",
+      "title": "[Bug] 线上 HerClub 支付订单创建时报 Load failed",
+      "description": "## 现象\n\n线上 HerClub 页面：\n\nhttps://club.hersoul.cn\n\n填写称呼和邮箱后，点击「扫码支付 77 元」，页面底部显示：\n\n`Load failed`\n\n无法进入二维码支付/订单创建结果。\n\n## 复现步骤\n\n1. 打开 https://club.hersoul.cn\n2. 点击「加入 Club」\n3. 输入称呼和邮箱\n4. 选择微信支付或支付宝\n5. 点击「扫码支付 77 元」\n6. 页面显示 `Load failed`\n\n## 当前排查结果\n\n线上前端请求的是：\n\n`POST https://hersoul.cn/api/herclub/orders`\n\n服务端接口本身可以返回订单数据，但浏览器从 `https://club.hersoul.cn` 跨域请求 `https://hersoul.cn` 时会触发 CORS 预检。\n\n当前 `OPTIONS https://hersoul.cn/api/herclub/orders` 返回 204，但响应头缺少 CORS 允许字段，例如：\n\n- `Access-Control-Allow-Origin: https://club.hersoul.cn`\n- `Access-Control-Allow-Methods: GET, POST, OPTIONS`\n- `Access-Control-Allow-Headers: content-type`\n\n因此浏览器拦截了真实 POST 请求，前端捕获到 `TypeError: Load failed` 并展示为 `Load failed`。\n\n## 预期行为\n\n点击「扫码支付 77 元」后，应成功创建 HerClub 订单，并展示支付二维码。\n\n## 建议修复\n\n在 `hersoul.cn/api/herclub/*` 相关接口上补充 CORS 配置，至少允许：\n\n```http\nAccess-Control-Allow-Origin: https://club.hersoul.cn\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\nAccess-Control-Allow-Headers: content-type\n```\n\n如果后续接口需要 cookie / 登录态，还需要：\n\n```http\nAccess-Control-Allow-Credentials: true\n```\n\n此时 `Access-Control-Allow-Origin` 不能使用 `*`，需要明确指定 `https://club.hersoul.cn`。\n\n## 备注\n\n接口还存在 rate limit，连续测试可能返回 `429 too_many_requests`，但当前用户侧 `Load failed` 的主要原因是 CORS。",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 1,
+      "repo": "herclub",
+      "created": "2026-04-27",
+      "updated": "2026-05-21",
+      "order": 3900
+    },
+    {
+      "id": "gh-her-web-80",
+      "title": "Trellis: Phase 1 research agent 派发时机优化",
+      "description": "## 问题\n\nPhase 1.2 Research 步骤标记为 `[optional · repeatable]`，但实际使用中主线程很少派发 trellis-research agent。常见表现：\n\n1. **该派不派**：主线程自己翻代码库（用 Glob/Grep/Read），占用主线程 context，拿到的信息质量不稳定\n2. **不该派却派**：小任务也派发 agent，增加延迟，反而不如主线程直接查快\n\n## 根因\n\n- workflow 里 Phase 1.2 只写了\"可以派 research agent\"，没有给出**判断标准**（什么条件下派 vs 不派）\n- Claude Code 主线程默认倾向自己做（Explore agent / 直接 Grep），因为 CLAUDE.md 里有\"Agent 派发原则\"限制了派发条件\n- 缺少一个中间态：不是\"完全不派\"也不是\"完全派\"，而是根据任务复杂度动态选择\n\n## 期望行为\n\n给出清晰的决策树，例如：\n\n- 已知文件/函数名 + ≤3 次查询能搞定 → 主线程直接查\n- 跨多模块/多文件探索 + 不确定找什么 → 派 trellis-research\n- 需要外部信息（API 文档、第三方库） → 派 trellis-research\n- Phase 2 implement 遇到技术卡点 → 允许回到 research 而不是硬编\n\n## 关联\n\n- Phase 1.2 Research `[optional · repeatable]`\n- CLAUDE.md Agent 派发原则（三条硬理由）\n- Phase 2.4 Rollback 的 research 回退路径",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 80,
+      "created": "2026-05-11",
+      "updated": "2026-05-21",
+      "order": 4000,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-78",
+      "title": "Trellis: 部署 + 测试 + 发版流程重做",
+      "description": "## 背景\n\nCodex Session 019e12d9 中，agent 在用户睡觉时自主调用 her-ops skill 执行 emergency release 到生产环境。虽然代码质量没问题，但这暴露了 Trellis 工作流缺少部署边界的风险。\n\n当前面包屑已加入 scope boundary 禁止自主部署，但长期需要从流程和工具层面解决。\n\n## 待做项\n\n### 部署流程\n- [ ] 定义正常发版路径：PR → merge main → 构建镜像 → 推腾讯云 → 生产验证\n- [ ] 定义 finish-work 与 PR/merge 状态的关系\n- [ ] 发版后本地 main 同步机制\n- [ ] 攒批发版 vs 逐改逐发的策略决定\n\n### E2E 测试环境\n- [ ] Docker 干净环境用于 E2E 测试\n- [ ] Roome 部署自动化用于集成测试\n- [ ] 当前 `pnpm dev` 本地环境的局限性文档化\n\n### Codex 工具增强\n- [ ] PreToolUse hook：拦截 ssh/release.sh/docker service update 命令（比 scope boundary 文本更强的保障）\n- [ ] session-start.py 效果评估（已注册，观察是否改善 context loading）\n- [ ] fork_turns=none 在 dispatch 指令中显式文档化\n- [ ] Browser Use vs agent-browser CLI 长期工具策略\n\n### Workflow 时序清理\n- [ ] Phase 2.3 E2E 环境生命周期文档（前台 exec session、就绪轮询、清理方式）\n- [ ] Phase 3 完整收尾流程与发版路径对齐",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 78,
+      "created": "2026-05-11",
+      "updated": "2026-05-21",
+      "order": 4100,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-125",
+      "title": "[功能] 内测申请表单改版——字段和提交后流程都需调整",
+      "description": "## 问题描述\n\nHer-Web 官网上的内测申请表单需要改版，涉及两个层面：\n\n1. **表单字段调整**：当前��集的字段需要增删改（具体字段待补充）\n2. **提交后流程调整**：表单提交后的审核/发码/通知流程需要优化（具体流程待补充）\n\n## 当前状态\n\n此 issue 先记录改版方向，具体的字段清单和流程设计后续在评论中补充。\n\n## TODO\n\n- [ ] 确定新的表单字段清单\n- [ ] 确定提交后的审核 → 发码 → 通知流程\n- [ ] 补充详细需求后开始实施",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 125,
+      "created": "2026-05-15",
+      "updated": "2026-05-21",
+      "order": 4200,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-121",
+      "title": "[安全] Token unlimited_quota 默认开启，API Key 泄露无额度兜底",
+      "description": "## 问题描述\n\nGateway token 的 `unlimited_quota` 字段在多个代码路径中被默认设为 `true`，导致 token 级别的额度检查被完全绕过。如果用户的 API Key 泄露，攻击者可以无限调用 API，`users.quota`（用户级余额）虽然会扣减为负数但不会阻断请求。\n\n## 现状\n\n### 三处代码设置 `unlimited_quota=true`\n\n1. **新用户注册** `createGatewayUser()` — `service.ts:447`\n   ```typescript\n   const token = await client.createToken({\n     unlimitedQuota: true, // ← 新 token 直接 unlimited\n   });\n   ```\n\n2. **Token 修复** `repairGatewayToken()` — `service.ts:961`\n   ```typescript\n   const token = await client.createToken({\n     unlimitedQuota: true, // ← 修复后也是 unlimited\n   });\n   ```\n\n3. **每次充值** `topUpUserQuota()` — `service.ts:1657`\n   ```typescript\n   await client.setTokenUnlimitedQuota(\n     binding.gatewayUserId, binding.tokenId, true // ← 充值就设 unlimited\n   );\n   ```\n\n### 注释与实现矛盾\n\n`service.ts:984-985` 的 D5 防线注释写道：\n> Gateway balance = 0 rejects requests (with unlimitedQuota removed)\n\n但代码里**没有任何地方 remove unlimitedQuota**。`syncGatewayForPlan()` 不管 unlimited 状态，试用到期的 `expireInviteTrialQuotaIfNeeded()` 也不改 unlimited。\n\n### Gateway 鉴权逻辑\n\nGateway 的 `PreConsumeTokenQuota`（`quota.go`）在 `unlimited_quota=true` 时跳过 `remain_quota` 检查，直接放行。只从 `users.quota`（用户级余额）扣减，但扣到负数也不拦截。\n\n### 当前受影响的 token\n\n至少 4 个付费用户的 token 是 unlimited：\n- guanguan0987 (token 202)\n- ann0209 (token 170)\n- shuiliangzi727 (token 164)\n- ugsloryx (token 229)\n\n## 安全风险\n\n- **API Key 泄露 = 无限制使用**：unlimited token 不检查 `remain_quota`，攻击者可以持续调用直到被手动发现\n- **用户余额可以变负**：`users.quota` 扣到负数后请求仍不被拒\n- **试用到期后仍可使用**：试用额度从 `users.quota` 扣完后，unlimited token 继续放行\n\n## 期望行为\n\n1. Token **不应该默认 unlimited**，`remain_quota` 应追踪实际可用额度\n2. 充值时增加 `remain_quota`（而不是设 unlimited）\n3. 试用到期 / 订阅取消时，`remain_quota` 同步扣减，达到 0 即拒绝请求\n4. `unlimited_quota` 仅保留给特殊场景（如内部测试账号），需要 admin 手动设置\n\n## 改动范围（初步评估）\n\n### 代码改动（her-web）\n\n| 文件 | 行 | 改动 |\n|------|-----|------|\n| `src/modules/api-gateway/service.ts:447` | createGatewayUser | `unlimitedQuota: false`，初始 `remainQuota` 设为首次充值额 |\n| `src/modules/api-gateway/service.ts:961` | repairGatewayToken | 同上 |\n| `src/modules/api-gateway/service.ts:1655-1661` | topUpUserQuota | 删除 `setTokenUnlimitedQuota(true)`，改为增加 `remain_quota` |\n| `src/modules/api-gateway/service.ts:1044+` | expireInviteTrialQuotaIfNeeded | 同步扣减 `remain_quota` |\n| `src/core/api-gateway/client.ts` | ApiGatewayClient | 可能需要新增 `increaseTokenRemainQuota()` 方法 |\n\n### 数据改动（gateway DB）\n\n- 将当前 unlimited=true 的 token 改为 `unlimited_quota=false`\n- 将 `remain_quota` 设为对应 `users.quota`（当前实际余额）\n\n### 需要验证\n\n- Gateway 的 `PostConsumeQuota` 在 `remain_quota=0` 时是否正确拒绝（需要确认 Go 代码逻辑）\n- 改动后现有用户是否能正常使用（`remain_quota` 必须和 `users.quota` 对齐）\n- 是否需要在 gateway 侧也做改动（如 `remain_quota` 扣减逻辑是否完整）\n\n## 优先级\n\nP1 — 当前无已知泄露事件，但这是一个系统性安全缺陷，应在三池数据清理完成后立即处理。\n\n## 前置依赖\n\n- 三池数据清理（当前进行中的 plan）完成后执行，避免两次操作冲突\n\n---\n\n## 代码部署后的数据操作（必做）\n\n代码改完部署后，需要对 gateway DB 执行以下操作：\n\n### 1. 关闭所有 unlimited token\n\n```sql\n-- 查出当前 unlimited=true 的 token\nSELECT t.id, t.user_id, u.username, t.remain_quota, t.unlimited_quota\nFROM tokens t JOIN users u ON u.id = t.user_id\nWHERE t.unlimited_quota = true AND t.deleted_at IS NULL;\n\n-- 关闭 unlimited（三池清理时确认的 4 个 token）\nUPDATE tokens SET unlimited_quota = false\nWHERE id IN (202, 164, 170, 229) AND deleted_at IS NULL;\n-- 202=guanguan0987, 164=shuiliangzi727, 170=ann0209, 229=ugsloryx\n```\n\n### 2. 对齐 remain_quota 和 users.quota\n\n```sql\n-- 确保 token 的 remain_quota 等于 users.quota（实际余额）\n-- 这样 unlimited 关闭后，鉴权检查用的 remain_quota 是准确的\nUPDATE tokens t SET remain_quota = u.quota\nFROM users u WHERE u.id = t.user_id\n  AND t.id IN (202, 164, 170, 229)\n  AND t.deleted_at IS NULL;\n```\n\n### 为什么必须做\n\n- 代码改动只影响**新的** topUp 调用，不会修改已有 token 的 unlimited 状态\n- 不做数据操作 = 这 4 个用户的 token 永远是 unlimited，代码改了也没用\n- remain_quota 必须和 users.quota 一致，否则关闭 unlimited 后用户可能被错误拦截或额度对不上",
+      "priority": null,
+      "column": "done",
+      "tags": [
+        "bug"
+      ],
+      "github": 121,
+      "created": "2026-05-15",
+      "updated": "2026-05-21",
+      "order": 4300,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-120",
+      "title": "[Bug] 付费引导页增加「我已完成支付」按钮",
+      "description": "> 🔗 转自 ReqFlow：[trivium-sys/reqflow#4](https://github.com/trivium-sys/reqflow/issues/4)\n> 原标签：approved, source:product, type:bug\n\n---\n\n当前付费引导页点击后跳转网站支付，但用户支付完成后若手动切回客户端而非通过网站返回按钮跳转，客户端无法感知支付状态变更，再次点击仍会跳转支付页。\n\n需要在该页面增加\"我已完成支付\"按钮，点击后主动查询支付状态，若已支付则直接放行进入客户端。\n\n---\n**关闭此 issue 时会自动同步关闭 [上游 reqflow#4](https://github.com/trivium-sys/reqflow/issues/4)**（前提是 Her-Web 已配 sync-close workflow）。",
+      "priority": null,
+      "column": "done",
+      "tags": [
+        "bug"
+      ],
+      "github": 120,
+      "created": "2026-05-15",
+      "updated": "2026-05-21",
+      "order": 4400,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-130",
+      "title": "管理后台改造需求（百人内测）",
+      "description": "@夙愿 百人内测需要管理后台做以下改造，方便批量操作和身份对应。\n\n## 1. 邀请码支持批量导出\n\n**现状**：邀请码可以批量生成，但不能批量导出，只能手动逐个复制。百人内测时需要导出 100+ 个邀请码。\n\n**期望**：在邀请码列表页加一个「批量导出」按钮，一键导出所有可用（未使用）的邀请码，格式为 CSV 或纯文本（每行一个码）。\n\n**优先级**：高\n\n## 2. 微信名自动回写到用户详情页\n\n**现状**：用户详情页已有「真实姓名」和「微信号」字段（手动填写）。表单提交时会收集用户的微信名，但没有自动回写到管理后台。\n\n**期望**：用户通过表单提交的微信名，在完成注册后自动出现在用户详情页。可以写入「真实姓名」或「微信号」字段。\n\n**技术路径**（供参考）：\n- 表单提交时微信名存入后端，与邮箱关联\n- 用户用该邮箱注册成功后，系统自动将微信名写入用户档案\n\n**优先级**：高\n\n## 3. 邀请码列表显示使用者\n\n**现状**：已使用的邀请码看不到是被哪个用户用了。只能从用户列表逐个点进详情页查看。\n\n**期望**：邀请码列表增加一列「使用者」，已使用的邀请码直接显示对应注册用户名或邮箱，支持点击跳转到用户详情页。\n\n**优先级**：中\n\n## 时间节点\n\n下周内测前需要就绪。",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 130,
+      "created": "2026-05-19",
+      "updated": "2026-05-21",
+      "order": 4500,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-129",
+      "title": "内测管理页面：按邮箱查用户接口",
+      "description": "@夙愿 百人内测需要一个管理页面（HTML），用来查看表单数据、分配邀请码、追踪注册状态、跳转用户详情页。这个页面需要一个后端接口来查询用户是否已注册。\n\n## 需要的接口\n\n### 按邮箱查询用户注册状态\n\n**接口**：`GET /api/admin/users?email={email}`\n\n**用途**：管理页面传入表单里收集的邮箱，查询该邮箱是否已注册 Her。用于在管理页面展示注册状态，以及拼接跳转链接。\n\n**期望返回**：\n```json\n{\n  \"registered\": true,\n  \"userId\": \"c9c6ff56-6eca-4614-ae9d-4b5d12054138\",\n  \"username\": \"xxx\",\n  \"registeredAt\": \"2026-05-19T10:00:00Z\",\n  \"inviteCode\": \"G6YZ989G\",\n  \"subscriptionPlan\": \"Max 试用\"\n}\n```\n\n未注册：\n```json\n{\n  \"registered\": false\n}\n```\n\n管理页面拿到 userId 后拼接 `/zh/admin/users/{userId}` 做跳转按钮。\n\n## 说明\n\n- 需要管理员权限（admin@hersoul.cn）\n- 优先级：高\n- 时间节点：下周内测前就绪",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 129,
+      "created": "2026-05-19",
+      "updated": "2026-05-21",
+      "order": 4600,
+      "repo": "her-web"
+    },
+    {
+      "id": "gh-her-web-128",
+      "title": "官网内测申请表单改造 — 百人内测准备",
+      "description": "@夙愿 官网「申请内测名额」按钮点击后弹出的表单页需要改造，为下周百人内测群做准备。另外当前表单提交申请是失败的状态，需要一并修复。\n\n## 需要改的内容\n\n### 字段调整（按顺序）\n\n1. **Her如何称呼你**（必填）— 文本输入框，placeholder：你的名字或昵称\n2. **你的微信号**（选填）— 文本输入框，placeholder：方便我们联系你\n3. **你的邮箱**（必填）— 邮箱输入框，placeholder：邀请码将发送至此邮箱，请使用此邮箱和收到的邀请码完成 Her 注册\n4. **你是**（必填）— 胶囊单选：女生 / 男生 / 不想说\n5. **你的电脑系统**（必填）— 胶囊单选：macOS / Windows / Linux\n6. **你目前主要使用哪些 AI 工具？**（选填）— 标签多选 + 自定义输入框\n   - 国外对话 AI（ChatGPT、Claude、Gemini 等）\n   - 国内对话 AI（Kimi、豆包、DeepSeek、通义千问等）\n   - AI Agent（Claude Code、Codex、OpenClaw 等）\n   - 多模态（Midjourney、即梦、可灵、Suno 等）\n   - 没怎么用过 AI\n   - 其他（勾选后出现输入框）\n7. **你每月在 AI 产品上的花费大约是？**（选填）— 列表式单选（竖向排列）\n   - 从未为 AI 付费（或仅使用免费版本）\n   - 200 元以内 / 月\n   - 500 元以内 / 月\n   - 1000 元以内 / 月\n   - 1000 元以上 / 月\n   - 根据 AI 产出或性能付费，没有固定的心理价位\n8. **你目前使用 AI 主要用来做什么？**（必填）— 标签多选 + 自定义输入框\n   - 工作（写方案、做分析、项目管理）\n   - 内容创作（文案、脚本、自媒体）\n   - 学习研究（查资料、学技能、读书笔记）\n   - 生活助手（日程、备忘、整理）\n   - 编程开发\n   - 其他（勾选后出现输入框）\n9. **你希望 Her 如何认识你？**（必填）— 文本域，placeholder：可以是你的工作、你的性格、你对 AI 的期待——任何你想让 Her 知道的事\n\n### 底部\n- 提交按钮：「提交申请」\n- 小字：「提交即表示你同意参与 Her 内测，我们会通过邮箱发送邀请码」\n\n### 需要去掉的字段\n- 「你是从哪里知道 Her 的？」\n- 原「Her 怎么称呼你」（跟第1题重复）\n\n### 表单数据\n- 表单提交后数据导入飞书多维表格",
+      "priority": null,
+      "column": "done",
+      "tags": [],
+      "github": 128,
+      "created": "2026-05-19",
+      "updated": "2026-05-21",
+      "order": 4700,
+      "repo": "her-web"
+    }
+  ]
+}
