@@ -25,7 +25,7 @@
 | Skill | 作用 |
 |-------|------|
 | [`/setup-matt-pocock-skills`](skills/setup-matt-pocock-skills/) | 一键安装 Issue Tracker、Triage 标签、Domain 文档等基础 skill |
-| [`/code-map`](skills/code-map/) | 一键安装 LSP 语言服务器，让 AI 精准定位代码 |
+| [`/lsp-setup`](skills/lsp-setup/) | 为项目配置 LSP 代码智能 + 会话 hook |
 
 ### 壹 · 对齐需求
 

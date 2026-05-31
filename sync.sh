@@ -22,7 +22,7 @@ SKILLS=(
   handoff
   improve-codebase-architecture
   her-dev-teammate
-  code-map
+  lsp-setup
   setup-matt-pocock-skills
 )
 
