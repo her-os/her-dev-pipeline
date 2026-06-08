@@ -27,4 +27,7 @@ The two branches produce very different artifacts — getting this wrong wastes 
 
 ## When done
 
-The _answer_ is the only thing worth keeping from a prototype. Capture it somewhere durable (commit message, ADR, issue, or a `NOTES.md` next to the prototype) along with the question it was answering. If the user is around, that capture is a quick conversation; if not, leave the placeholder so they (or you, on the next pass) can fill in the verdict before deleting the prototype.
+Once the user has validated or rejected the prototype, complete both steps before moving on:
+
+1. **Capture the decision.** Write the answer (what was the question, what did we learn, which approach won) to a durable location — ADR, issue comment, commit message, or CONTEXT.md.
+2. **Delete all prototype files.** If the user wants to absorb parts into real code, do that first, then delete the rest. No prototype file should outlive the decision it was built to make.

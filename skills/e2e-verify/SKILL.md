@@ -41,12 +41,12 @@ gh issue view <N> --json body --jq .body
 
 Extract:
 1. **Acceptance Criteria** — the checklist of verifiable conditions
-2. **E2E Verification Plan** — structured test steps, if present
-3. **手测 Checklist** — items marked for human (skip these, note for /functional-test)
+2. **Verification Setup** — prepared accounts, tools, permissions, environment prerequisites
+3. **Low-confidence Areas** — areas where AI verification is unreliable (still test them, but flag results for human re-verification)
 
-If E2E Verification Plan is missing or incomplete, also:
-- Read project `.env` / `.env.local` for DB connection, API base URL
-- Read `package.json` scripts for available dev commands
+Also read:
+- Project `.env` / `.env.local` for DB connection, API base URL
+- `package.json` scripts for available dev commands
 
 ### Read Agent Brief
 
@@ -54,9 +54,7 @@ Check issue comments for `## Agent Brief` from recon — affected files, domain 
 
 ### Determine test scope
 
-**If PRD has E2E Verification Plan** → use it as-is. It already contains scope, methods, and ordering.
-
-**If PRD has no plan** → build one yourself:
+Derive the test plan from AC + Verification Setup:
 
 1. **From diff** (if available): extract changed exported symbols → `codegraph_impact` depth=3 → affected API routes + page components
 2. **From issue description**: `codegraph_context` with issue keywords → supplement with related modules impact might miss
@@ -104,22 +102,22 @@ If any smoke check fails → report as FAIL, continue remaining steps but note t
 
 ## Step 3 — Core AC Verification
 
-**Verify every AC item.** Choose method by what you're verifying, not by what's cheapest:
+**Verify every AC item.** Principle: **use the lightest method that produces reliable evidence.** Only escalate when a lighter method cannot prove the thing you need to prove.
 
-| Verifying | Method | Example |
-|-----------|--------|---------|
-| Data correctness (row exists, field value, constraint) | DB query | `SELECT trial_credit FROM users WHERE ...` |
-| API behavior (endpoint response, side effect) | curl / API call | `POST /api/redeem` returns 200 + correct body |
-| UI display correctness (element visible, value shown) | browser (`/agent-browser`) | Open billing page, check amount displayed |
-| UI interaction flow (click → result) | browser / computer-use | Fill form → submit → verify result page |
-| Data + UI alignment | DB query **AND** browser | Query DB value, then check page shows same value |
-| Subjective UX feel | SKIP → /functional-test | "Does this feel right?" — only humans can judge |
+Weight ladder (lightest → heaviest):
 
-**Key rule**: when an AC item involves UI display, you MUST verify with browser — don't just query DB and assume the UI shows it correctly. DB + browser can coexist for the same AC item (data alignment check).
+| Weight | Method | Use when |
+|--------|--------|----------|
+| 1 | DB query / logs / debug probes | Data truth: row exists, field value, constraint, error log entry |
+| 2 | curl / API call | Service behavior: endpoint response, side effects, status codes |
+| 3 | browser (`/agent-browser`) | UI rendering: element visible, value displayed, page layout |
+| 4 | computer-use | Non-web interface: desktop app, native UI |
 
-Browser tools:
-- Web pages / UI: use `/agent-browser` skill
-- Non-web interfaces (desktop app, native UI): use computer-use
+Rules:
+- **Don't escalate needlessly.** If a DB query proves the value is correct, don't open a browser to read the same number off screen — unless the AC specifically requires verifying the UI displays it.
+- **Don't read browser console for data you can get from logs or DB.** Console screenshots are unreliable; direct data access is not.
+- **UI display requires browser.** Don't just query DB and assume the UI shows it correctly.
+- **Cross-layer alignment = both.** DB query + browser to verify data matches display.
 
 Output the plan before executing:
 

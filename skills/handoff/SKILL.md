@@ -44,6 +44,7 @@ To review: use /agent-log skill with the JSONL path above
 
 - **Context**: what was being worked on and why
 - **Current state**: what's done, what's not
+- **Key files**: list every file the next session will need to read or edit, with one-line purpose. Include source files, configs, test files, skill files, docs — anything touched or discovered. The next session has zero context; a missing path means wasted exploration.
 - **Next steps**: what the next session should do
 - **Suggested skills**: which skills to invoke (e.g., `/bugfix`, `/e2e-verify #N`)
 
@@ -78,6 +79,18 @@ mv docs/handoff-<completed-topic>-<MMDD>.md docs/archive/
 ```
 
 Don't spend time auditing all handoffs — just move the ones you know are done from this session's context.
+
+## Step 4 — Flush decisions to durable docs
+
+Before writing the handoff, check: did this session produce domain decisions, terminology changes, or architectural choices?
+
+- **Terminology / domain model changes** → update `CONTEXT.md`
+- **Architectural or design decisions** → create/update ADR in `docs/adr/`
+- **Pipeline / workflow decisions** → update the relevant skill or CLAUDE.md
+
+Handoff documents are ephemeral — they get archived once the task is done. Decisions that outlive the task must live in durable docs. If you're unsure whether something is a "decision", ask: would a future session need this even if it's working on a different task? Yes → durable doc. No → handoff only.
+
+Do this flush before writing the handoff, so the handoff can reference the durable doc paths instead of inlining the decisions.
 
 ## Rules
 

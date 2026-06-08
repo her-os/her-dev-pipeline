@@ -62,6 +62,7 @@ Before writing any code:
 - [ ] Design interfaces for [testability](interface-design.md)
 - [ ] List the behaviors to test (not implementation steps) — prioritize: AC items first, then critical paths, then complex logic
 - [ ] **Autonomous mode** (Codex): proceed with the plan. **Interactive mode** (CC): confirm with user.
+- [ ] **Create todo items**: Use the todo tool to create one task per behavior. Each task = one RED→GREEN cycle. Mark `in_progress` before starting, `completed` after GREEN passes. This is your drift anchor — don't skip behaviors, don't invent new ones mid-flight.
 
 **You can't test everything.** Focus testing effort on AC items and critical paths, not every possible edge case.
 
@@ -92,6 +93,13 @@ Rules:
 - Don't anticipate future tests
 - Keep tests focused on observable behavior
 
+GREEN-stage guardrails (check before moving on):
+
+- If your GREEN code adds a conditional into an unrelated flow, stop. That logic belongs behind its own abstraction, not scattered across existing paths.
+- If your GREEN code creates a helper/wrapper called from only one place, delete it. Inline until REFACTOR proves the abstraction is earned.
+- Before writing new utility code, search the codebase for existing helpers that already do this.
+- If your GREEN code pushes any file past 1000 lines, stop and decompose before continuing.
+
 ### 4. Refactor
 
 After all tests pass, look for [refactor candidates](refactoring.md):
@@ -100,9 +108,19 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 - [ ] Deepen modules (move complexity behind simple interfaces)
 - [ ] Apply SOLID principles where natural
 - [ ] Consider what new code reveals about existing code
+- [ ] **Code judo check**: Can you change the model, interface, or data structure so that whole branches of code disappear? Don't tidy complexity — delete it.
 - [ ] Run tests after each refactor step
 
 **Never refactor while RED.** Get to GREEN first.
+
+### 5. Cleanup
+
+After all behaviors are implemented and refactored:
+
+- [ ] Remove test scaffolding, debug logging, and temporary fixtures
+- [ ] Delete unused imports and dead code introduced during GREEN iterations
+- [ ] Verify no test relies on implementation details that survived from early iterations
+- [ ] Run full test suite one final time
 
 ## Checklist Per Cycle
 
