@@ -459,61 +459,10 @@ elif [ -f go.mod ]; then
 fi
 
 
-# --- Phase 4: Retrieval rules in CLAUDE.md / AGENTS.md ---
+# --- Phase 4: Project instruction files ---
 log ""
-log "=== Retrieval Rules ==="
-
-RETRIEVAL_TEMPLATE='## 代码检索
-
-检索优先级：LSP → rg → 小范围读文件
-
-**1. LSP（精确符号操作）**
-
-修改代码前优先用 LSP：
-- `documentSymbol` → 文件结构概览，替代读全文
-- `goToDefinition` / `findReferences` → 精确到行的符号定位
-- `hover` → 类型签名
-- `getDiagnostics` → 快速看当前文件诊断
-
-LSP 冷启动失败后等 3 秒重试一次。不要臆造当前会话里没有暴露的 LSP 工具。
-
-**2. rg（文本搜索）**
-
-路由字符串、配置 key、错误消息、环境变量、非代码文件。
-
-**3. git / 小范围读文件**
-
-- `git` 看状态、分支、提交、diff
-- 只精读前面工具定位到的行范围，不读全文'
-
-# Check CLAUDE.md. Do not auto-edit tracked team files; local-only Claude notes
-# are fine when CLAUDE.md is already ignored or already untracked.
-if [ -f CLAUDE.md ] && grep -q '代码检索' CLAUDE.md 2>/dev/null; then
-  ok "CLAUDE.md has retrieval rules"
-elif [ -f CLAUDE.md ] && git_tracked "CLAUDE.md"; then
-  ok "CLAUDE.md is tracked; skip auto-edit"
-elif [ ! -f CLAUDE.md ] && ! git_ignored "CLAUDE.md"; then
-  ok "CLAUDE.md absent and not ignored (skip local-only edit)"
-else
-  miss "CLAUDE.md missing retrieval rules"
-  if $FIX; then
-    { [ -f CLAUDE.md ] && [ -s CLAUDE.md ] && echo ""; echo "$RETRIEVAL_TEMPLATE"; } >> CLAUDE.md
-    fix "CLAUDE.md retrieval rules added"
-  fi
-fi
-
-# Check .codex/AGENTS.md (project-level, not global)
-AGENTS_FILE=".codex/AGENTS.md"
-if [ -f "$AGENTS_FILE" ] && grep -q '代码检索' "$AGENTS_FILE" 2>/dev/null; then
-  ok "$AGENTS_FILE has retrieval rules"
-else
-  miss "$AGENTS_FILE missing retrieval rules"
-  if $FIX; then
-    mkdir -p "$(dirname "$AGENTS_FILE")"
-    { [ -f "$AGENTS_FILE" ] && [ -s "$AGENTS_FILE" ] && echo ""; echo "$RETRIEVAL_TEMPLATE"; } >> "$AGENTS_FILE"
-    fix "$AGENTS_FILE retrieval rules added"
-  fi
-fi
+log "=== Project Instruction Files ==="
+ok "skipped; keep projects clean and avoid generating CLAUDE.md/.codex/AGENTS.md"
 else
 log ""
 log "=== Project Dependencies / Retrieval Rules ==="

@@ -1,3 +1,78 @@
+diff --git a/src/config/mod.rs b/src/config/mod.rs
+index 2359393..14fdc6c 100644
+--- a/src/config/mod.rs
++++ b/src/config/mod.rs
+@@ -252,12 +252,13 @@ mod tests {
+         let config = LspMcpConfig::default();
+         let tools = config.enabled_tools();
+ 
+-        assert_eq!(tools.len(), 10);
++        assert_eq!(tools.len(), 11);
+         assert!(tools.contains("goToDefinition"));
+         assert!(tools.contains("getSymbolDefinition"));
+         assert!(tools.contains("findReferences"));
+         assert!(tools.contains("hover"));
+         assert!(tools.contains("getDiagnostics"));
++        assert!(tools.contains("setWorkspaceRoot"));
+         assert!(tools.contains("findSymbol"));
+         assert!(tools.contains("documentSymbol"));
+         assert!(tools.contains("callHierarchy"));
+@@ -278,7 +279,7 @@ mod tests {
+         };
+         let tools = config.enabled_tools();
+ 
+-        assert_eq!(tools.len(), 10);
++        assert_eq!(tools.len(), 11);
+         assert!(tools.contains("findReferencedSymbols"));
+     }
+ 
+@@ -295,7 +296,7 @@ mod tests {
+         };
+         let tools = config.enabled_tools();
+ 
+-        assert_eq!(tools.len(), 9);
++        assert_eq!(tools.len(), 10);
+         assert!(!tools.contains("callHierarchy"));
+     }
+ 
+@@ -324,7 +325,7 @@ mod tests {
+         let tools = config.enabled_tools();
+ 
+         assert!(!tools.contains("initialSetup"));
+-        assert_eq!(tools.len(), 9);
++        assert_eq!(tools.len(), 10);
+     }
+ 
+     #[test]
+@@ -340,7 +341,7 @@ mod tests {
+         let tools = config.enabled_tools();
+ 
+         assert!(tools.contains("initialSetup"));
+-        assert_eq!(tools.len(), 10);
++        assert_eq!(tools.len(), 11);
+     }
+ 
+     #[test]
+@@ -356,7 +357,7 @@ mod tests {
+         let tools = config.enabled_tools();
+ 
+         assert!(!tools.contains("initialSetup"));
+-        assert_eq!(tools.len(), 9);
++        assert_eq!(tools.len(), 10);
+     }
+ 
+     #[test]
+@@ -371,8 +372,8 @@ mod tests {
+         let tools = config.enabled_tools();
+ 
+         assert!(!tools.contains("initialSetup"));
+-        // Full preset is 15 tools (16 ALL_TOOLS - 1 opt-in semanticSearch), minus initialSetup = 14
+-        assert_eq!(tools.len(), 14);
++        // Full preset is 16 tools (18 ALL_TOOLS - 2 opt-in tools), minus initialSetup = 15
++        assert_eq!(tools.len(), 15);
+     }
+ 
+     #[test]
 diff --git a/src/lsp/manager/core.rs b/src/lsp/manager/core.rs
 index a9ff09d..f3b6f60 100644
 --- a/src/lsp/manager/core.rs
@@ -96,6 +171,497 @@ index 7c2fb7e..11e9c92 100644
          );
      }
  
+diff --git a/src/mcp/filter.rs b/src/mcp/filter.rs
+index 630baf4..23bd08a 100644
+--- a/src/mcp/filter.rs
++++ b/src/mcp/filter.rs
+@@ -122,6 +122,7 @@ impl FilteredLspMcpServer {
+             "listFiles" => "List workspace files; use to discover paths",
+             "readSourceCode" => "Read source from file; use for exact text",
+             "health" => "Service status; use to check logs/session",
++            "setWorkspaceRoot" => "Set this session's workspace root; use for worktrees",
+             "initialSetup" => "Guided setup; use to configure languages/tools",
+             _ => return None,
+         };
+diff --git a/src/mcp/mod.rs b/src/mcp/mod.rs
+index 391bb37..f6facf3 100644
+--- a/src/mcp/mod.rs
++++ b/src/mcp/mod.rs
+@@ -24,7 +24,7 @@ use crate::config::{DebugConfig, LspMcpConfig, OutputMode};
+ use crate::lsp::manager::Manager;
+ use crate::lsp::registry::LanguageMetadata;
+ use crate::mcp::tool_params::*;
+-use crate::mcp_response::tool_result_success;
++use crate::mcp_response::{tool_result_error, tool_result_success};
+ use crate::semantic_search::SemanticSearchManager;
+ use crate::service::{create_service, LspService};
+ use crate::session::{new_request_id, request_id_header};
+@@ -48,7 +48,7 @@ pub struct LspMcpServer {
+     output_mode: OutputMode,
+     debug_enabled: bool,
+     debug_config: Option<DebugConfig>,
+-    workspace_root: PathBuf,
++    workspace_root: Arc<RwLock<PathBuf>>,
+     enabled_tools: HashSet<String>,
+     semantic_search_manager: Option<Arc<RwLock<SemanticSearchManager>>>,
+     codemap_manager: Option<Arc<CodemapManager>>,
+@@ -62,7 +62,7 @@ impl LspMcpServer {
+             output_mode: config.output_mode(),
+             debug_enabled: config.debug_config().is_some(),
+             debug_config: config.debug.clone(),
+-            workspace_root: workspace_root.to_path_buf(),
++            workspace_root: Arc::new(RwLock::new(workspace_root.to_path_buf())),
+             enabled_tools: config.enabled_tools(),
+             semantic_search_manager: None,
+             codemap_manager: None,
+@@ -142,7 +142,11 @@ Use request IDs to correlate tool output with log entries."#
+ ## Positioning
+ All line and character positions use **1-based indexing** (first line is 1, first character is 1).
+ 
+-After edits, use `getDiagnostics` to fetch the latest LSP diagnostics."#
++After edits, use `getDiagnostics` to fetch the latest LSP diagnostics.
++
++Use `setWorkspaceRoot` when you need this MCP session to operate on a different
++worktree. The override affects only this MCP server process; new sessions still
++default to the directory where lsp-mcp was launched."#
+                 .to_string()
+         };
+ 
+@@ -535,6 +539,74 @@ impl LspMcpServer {
+         Ok(output)
+     }
+ 
++    #[tool(
++        name = "setWorkspaceRoot",
++        description = "Set this MCP session's workspace root for subsequent tools"
++    )]
++    async fn set_workspace_root(
++        &self,
++        Parameters(params): Parameters<SetWorkspaceRootParams>,
++    ) -> Result<CallToolResult, McpError> {
++        let request_id = new_request_id();
++        tracing::debug!(
++            request_id = %request_id,
++            tool = "setWorkspaceRoot",
++            path = %params.path,
++            "Processing tool request"
++        );
++
++        let current_root = self.workspace_root.read().await.clone();
++        let requested = PathBuf::from(params.path.trim());
++        let target = if requested.is_absolute() {
++            requested
++        } else {
++            current_root.join(requested)
++        };
++
++        let workspace_root = match target.canonicalize() {
++            Ok(path) if path.is_dir() => path,
++            Ok(path) => {
++                return Ok(self.wrap_output(
++                    request_id,
++                    tool_result_error(format!(
++                        "workspace root must be a directory, got: {}",
++                        path.display()
++                    )),
++                ));
++            }
++            Err(err) => {
++                return Ok(self.wrap_output(
++                    request_id,
++                    tool_result_error(format!(
++                        "failed to resolve workspace root '{}': {}",
++                        target.display(),
++                        err
++                    )),
++                ));
++            }
++        };
++
++        match self.service.set_workspace_root(&workspace_root).await {
++            Ok(config) => {
++                *self.workspace_root.write().await = workspace_root.clone();
++                let output = format!(
++                    "# Workspace Root\n\nworkspace_root={}\nlanguages={:?}\n\nSubsequent LSP tools in this MCP session resolve relative paths from this directory. Other AI sessions are unaffected; new sessions still default to their startup directory.",
++                    workspace_root.display(),
++                    config.languages
++                );
++                Ok(self.wrap_output(request_id, tool_result_success(output)))
++            }
++            Err(err) => Ok(self.wrap_output(
++                request_id,
++                tool_result_error(format!(
++                    "failed to switch workspace root to '{}': {}",
++                    workspace_root.display(),
++                    err
++                )),
++            )),
++        }
++    }
++
+     #[tool(name = "health", description = "Service status")]
+     async fn health(&self) -> Result<CallToolResult, McpError> {
+         let request_id = new_request_id();
+@@ -544,11 +616,12 @@ impl LspMcpServer {
+             "Processing tool request"
+         );
+ 
++        let workspace_root = self.workspace_root.read().await.clone();
+         let output = diagnostics::health(
+             &self.service,
+             self.output_mode,
+             self.debug_config.as_ref(),
+-            &self.workspace_root,
++            &workspace_root,
+             self.semantic_search_manager.clone(),
+         )
+         .await;
+@@ -839,6 +912,22 @@ mod tests {
+         result.is_error == Some(true)
+     }
+ 
++    #[tokio::test]
++    async fn test_set_workspace_root_updates_session_only_state() {
++        let (server, _temp) = create_test_server().await;
++        let target = TempDir::new().expect("Failed to create target workspace");
++        let canonical = target.path().canonicalize().expect("target should resolve");
++
++        let params = Parameters(SetWorkspaceRootParams {
++            path: target.path().to_string_lossy().to_string(),
++        });
++        let result = server.set_workspace_root(params).await.unwrap();
++        let text = extract_text_content(&result);
++
++        assert!(text.contains("workspace_root="));
++        assert_eq!(*server.workspace_root.read().await, canonical);
++    }
++
+     #[tokio::test]
+     async fn test_find_identifier_returns_data_directly() {
+         let (server, _temp) = create_test_server().await;
+diff --git a/src/mcp/tool_params.rs b/src/mcp/tool_params.rs
+index 5357aab..344bed2 100644
+--- a/src/mcp/tool_params.rs
++++ b/src/mcp/tool_params.rs
+@@ -175,6 +175,14 @@ pub struct FindIdentifierParams {
+     pub offset: Option<u32>,
+ }
+ 
++/// Parameters for the setWorkspaceRoot tool.
++/// Repoints this MCP server process to a different workspace root for later calls.
++#[derive(Debug, Deserialize, JsonSchema)]
++pub struct SetWorkspaceRootParams {
++    /// Directory to use as the workspace root. Relative paths resolve from the current root.
++    pub path: String,
++}
++
+ /// Parameters for the listFiles tool.
+ /// Returns a list of all files in the workspace.
+ #[derive(Debug, Deserialize, JsonSchema)]
+diff --git a/src/service/core.rs b/src/service/core.rs
+index 1c4cb54..5a9811e 100644
+--- a/src/service/core.rs
++++ b/src/service/core.rs
+@@ -1,24 +1,26 @@
+ // ABOUTME: Domain service layer for LSP-backed code navigation operations.
+ // ABOUTME: Provides async methods for symbol lookup, references, and file access.
+ 
++use super::operations::{call_hierarchy, definitions, diagnostics, hover, references, symbols};
++use super::types::errors::ServiceError;
++use super::types::response::{
++    McpDefinitionResponse, McpIdentifierResponse, McpListFilesResponse, McpReferencesResponse,
++    McpSymbolsResponse, SymbolDefinitionResponse,
++};
+ use crate::api_types::{
+-    CallHierarchyDirection, CallHierarchyResponse, DiagnosticsResponse, HoverResponse,
+-    ImplementationResponse, IncomingCallsResponse, LspStatus, OutgoingCallsResponse, Position,
+-    PrepareCallHierarchyResponse, Range, ReferencedSymbolsResponse, SupportedLanguages,
++    set_global_mount_dir, CallHierarchyDirection, CallHierarchyResponse, DiagnosticsResponse,
++    HoverResponse, ImplementationResponse, IncomingCallsResponse, LspStatus, OutgoingCallsResponse,
++    Position, PrepareCallHierarchyResponse, Range, ReferencedSymbolsResponse, SupportedLanguages,
+     WorkspaceSymbolResponse,
+ };
++use crate::config::LspMcpConfig;
+ use crate::lsp::manager::Manager;
+ use crate::utils::file_utils::normalize_path;
+ use lsp_types::Range as LspRange;
+ use std::collections::HashMap;
++use std::path::Path;
+ use std::sync::Arc;
+-
+-use super::operations::{call_hierarchy, definitions, diagnostics, hover, references, symbols};
+-use super::types::errors::ServiceError;
+-use super::types::response::{
+-    McpDefinitionResponse, McpIdentifierResponse, McpListFilesResponse, McpReferencesResponse,
+-    McpSymbolsResponse, SymbolDefinitionResponse,
+-};
++use tokio::sync::RwLock;
+ 
+ /// Provides code navigation operations over a workspace manager.
+ ///
+@@ -36,12 +38,14 @@ use super::types::response::{
+ /// # }
+ /// ```
+ pub struct LspService {
+-    manager: Arc<Manager>,
++    manager: Arc<RwLock<Arc<Manager>>>,
+ }
+ 
+ /// Creates a new LspService instance with the given manager.
+ pub fn create_service(manager: Arc<Manager>) -> LspService {
+-    LspService { manager }
++    LspService {
++        manager: Arc::new(RwLock::new(manager)),
++    }
+ }
+ 
+ fn normalize_file_path(file_path: &str) -> Result<String, ServiceError> {
+@@ -53,6 +57,38 @@ fn normalize_optional_file_path(file_path: Option<&str>) -> Result<Option<String
+ }
+ 
+ impl LspService {
++    async fn manager(&self) -> Arc<Manager> {
++        self.manager.read().await.clone()
++    }
++
++    /// Repoints this MCP session at a new workspace root.
++    ///
++    /// The override is process-local: other lsp-mcp server instances keep their
++    /// own startup workspace, and a new session still defaults to its cwd.
++    pub async fn set_workspace_root(&self, workspace_root: &Path) -> Result<LspMcpConfig, String> {
++        let workspace_path = workspace_root.to_str().ok_or_else(|| {
++            format!(
++                "Workspace root is not valid unicode: {}",
++                workspace_root.display()
++            )
++        })?;
++
++        let config = LspMcpConfig::load_merged(workspace_root);
++        let manager = Arc::new(
++            Manager::new(workspace_path)
++                .await
++                .map_err(|e| e.to_string())?,
++        );
++        manager
++            .start_langservers_async(workspace_path, Some(config.clone()))
++            .await;
++
++        set_global_mount_dir(workspace_root);
++        *self.manager.write().await = manager;
++
++        Ok(config)
++    }
++
+     /// Retrieves all symbol definitions in a file with enriched metadata.
+     pub async fn definitions_in_file(
+         &self,
+@@ -64,8 +100,9 @@ impl LspService {
+         context_lines: u32,
+     ) -> Result<McpSymbolsResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         definitions::definitions_in_file_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             include_locals,
+             include_children,
+@@ -87,8 +124,9 @@ impl LspService {
+         offset: Option<u32>,
+     ) -> Result<McpDefinitionResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         definitions::find_definition_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             include_source_code,
+@@ -107,13 +145,9 @@ impl LspService {
+         include_raw_response: bool,
+     ) -> Result<ImplementationResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
+-        definitions::find_implementation_impl(
+-            &self.manager,
+-            &file_path,
+-            position,
+-            include_raw_response,
+-        )
+-        .await
++        let manager = self.manager().await;
++        definitions::find_implementation_impl(&manager, &file_path, position, include_raw_response)
++            .await
+     }
+ 
+     /// Finds all references to the symbol at the given position.
+@@ -127,8 +161,9 @@ impl LspService {
+         offset: Option<u32>,
+     ) -> Result<McpReferencesResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         references::find_references_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             include_raw_response,
+@@ -150,8 +185,9 @@ impl LspService {
+         include_externals: bool,
+     ) -> Result<ReferencedSymbolsResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         references::find_referenced_symbols_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             full_scan,
+@@ -170,8 +206,8 @@ impl LspService {
+         offset: Option<u32>,
+     ) -> Result<McpIdentifierResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
+-        symbols::find_identifier_impl(&self.manager, &file_path, name, position, limit, offset)
+-            .await
++        let manager = self.manager().await;
++        symbols::find_identifier_impl(&manager, &file_path, name, position, limit, offset).await
+     }
+ 
+     /// Lists all files tracked by the workspace.
+@@ -180,7 +216,8 @@ impl LspService {
+         limit: Option<u32>,
+         offset: Option<u32>,
+     ) -> Result<McpListFilesResponse, ServiceError> {
+-        symbols::list_files_impl(&self.manager, limit, offset).await
++        let manager = self.manager().await;
++        symbols::list_files_impl(&manager, limit, offset).await
+     }
+ 
+     /// Reads source code from a file, optionally within a specific range.
+@@ -191,11 +228,13 @@ impl LspService {
+     ) -> Result<String, ServiceError> {
+         let lsp_range = range.map(|range| LspRange::new(range.start.into(), range.end.into()));
+         let file_path = normalize_file_path(file_path)?;
+-        Ok(self.manager.read_source_code(&file_path, lsp_range).await?)
++        let manager = self.manager().await;
++        Ok(manager.read_source_code(&file_path, lsp_range).await?)
+     }
+ 
+     /// Returns health status for all supported language servers.
+     pub async fn health(&self) -> HashMap<SupportedLanguages, LspStatus> {
++        let manager = self.manager().await;
+         let mut languages = HashMap::new();
+         for lang in [
+             SupportedLanguages::Python,
+@@ -207,9 +246,9 @@ impl LspService {
+             SupportedLanguages::Golang,
+             SupportedLanguages::PHP,
+         ] {
+-            let status = if self.manager.get_client(lang).await.is_some() {
++            let status = if manager.get_client(lang).await.is_some() {
+                 LspStatus::Ready
+-            } else if self.manager.is_language_pending(lang).await {
++            } else if manager.is_language_pending(lang).await {
+                 LspStatus::Initializing
+             } else {
+                 LspStatus::Unavailable
+@@ -225,7 +264,8 @@ impl LspService {
+         file_path: Option<&str>,
+     ) -> Result<DiagnosticsResponse, ServiceError> {
+         let file_path = normalize_optional_file_path(file_path)?;
+-        diagnostics::get_diagnostics_impl(&self.manager, file_path.as_deref()).await
++        let manager = self.manager().await;
++        diagnostics::get_diagnostics_impl(&manager, file_path.as_deref()).await
+     }
+ 
+     /// Gets hover information (documentation, type info) for a symbol at a given position.
+@@ -237,8 +277,9 @@ impl LspService {
+         include_definition: bool,
+     ) -> Result<HoverResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         hover::hover_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             include_raw_response,
+@@ -257,8 +298,9 @@ impl LspService {
+         offset: Option<u32>,
+         context_lines: u32,
+     ) -> Result<WorkspaceSymbolResponse, ServiceError> {
++        let manager = self.manager().await;
+         symbols::workspace_symbol_impl(
+-            &self.manager,
++            &manager,
+             query,
+             include_raw_response,
+             exact,
+@@ -276,7 +318,8 @@ impl LspService {
+         file_path: &str,
+     ) -> Result<SymbolDefinitionResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
+-        definitions::get_symbol_definition_impl(&self.manager, symbol_name, &file_path).await
++        let manager = self.manager().await;
++        definitions::get_symbol_definition_impl(&manager, symbol_name, &file_path).await
+     }
+ 
+     /// Prepares the call hierarchy at the given position.
+@@ -287,8 +330,9 @@ impl LspService {
+         include_raw_response: bool,
+     ) -> Result<PrepareCallHierarchyResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         call_hierarchy::prepare_call_hierarchy_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             include_raw_response,
+@@ -304,13 +348,9 @@ impl LspService {
+         include_raw_response: bool,
+     ) -> Result<IncomingCallsResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
+-        call_hierarchy::incoming_calls_impl(
+-            &self.manager,
+-            &file_path,
+-            position,
+-            include_raw_response,
+-        )
+-        .await
++        let manager = self.manager().await;
++        call_hierarchy::incoming_calls_impl(&manager, &file_path, position, include_raw_response)
++            .await
+     }
+ 
+     /// Gets outgoing calls (callees) for the function at the given position.
+@@ -321,13 +361,9 @@ impl LspService {
+         include_raw_response: bool,
+     ) -> Result<OutgoingCallsResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
+-        call_hierarchy::outgoing_calls_impl(
+-            &self.manager,
+-            &file_path,
+-            position,
+-            include_raw_response,
+-        )
+-        .await
++        let manager = self.manager().await;
++        call_hierarchy::outgoing_calls_impl(&manager, &file_path, position, include_raw_response)
++            .await
+     }
+ 
+     /// Unified method for call hierarchy traversal in either direction.
+@@ -342,8 +378,9 @@ impl LspService {
+         context_lines: u32,
+     ) -> Result<CallHierarchyResponse, ServiceError> {
+         let file_path = normalize_file_path(file_path)?;
++        let manager = self.manager().await;
+         call_hierarchy::call_hierarchy_impl(
+-            &self.manager,
++            &manager,
+             &file_path,
+             position,
+             direction,
 diff --git a/src/service/operations/definitions.rs b/src/service/operations/definitions.rs
 index f5609be..b6b0298 100644
 --- a/src/service/operations/definitions.rs
@@ -135,6 +701,91 @@ index f5609be..b6b0298 100644
      if context_lines > 0 {
          attach_snippets_to_symbols(manager, file_path, &mut symbols, context_lines).await;
      }
+diff --git a/src/tool_registry.rs b/src/tool_registry.rs
+index acc5096..97e50e5 100644
+--- a/src/tool_registry.rs
++++ b/src/tool_registry.rs
+@@ -20,6 +20,7 @@ pub const ALL_TOOLS: &[&str] = &[
+     "readSourceCode",
+     "health",
+     "getDiagnostics",
++    "setWorkspaceRoot",
+     "initialSetup",
+     "semanticSearch",
+     "codemap",
+@@ -35,6 +36,7 @@ pub const CORE_TOOLS: &[&str] = &[
+     "findReferences",
+     "hover",
+     "getDiagnostics",
++    "setWorkspaceRoot",
+     "findSymbol",
+     "documentSymbol",
+     "callHierarchy",
+@@ -48,6 +50,7 @@ pub const MINIMAL_TOOLS: &[&str] = &[
+     "findReferences",
+     "hover",
+     "getDiagnostics",
++    "setWorkspaceRoot",
+ ];
+ 
+ /// Tool preset configurations
+@@ -87,40 +90,41 @@ mod tests {
+ 
+     #[test]
+     fn test_all_tools_count() {
+-        assert_eq!(ALL_TOOLS.len(), 17, "Expected 17 total tools");
++        assert_eq!(ALL_TOOLS.len(), 18, "Expected 18 total tools");
+     }
+ 
+     #[test]
+     fn test_core_tools_count() {
+-        assert_eq!(CORE_TOOLS.len(), 10, "Expected 10 core tools");
++        assert_eq!(CORE_TOOLS.len(), 11, "Expected 11 core tools");
+     }
+ 
+     #[test]
+     fn test_minimal_tools_count() {
+-        assert_eq!(MINIMAL_TOOLS.len(), 4, "Expected 4 minimal tools");
++        assert_eq!(MINIMAL_TOOLS.len(), 5, "Expected 5 minimal tools");
+     }
+ 
+     #[test]
+     fn test_get_preset_tools_minimal() {
+         let tools = get_preset_tools(ToolPreset::Minimal);
+-        assert_eq!(tools.len(), 4);
++        assert_eq!(tools.len(), 5);
+         assert!(tools.contains("goToDefinition"));
+         assert!(tools.contains("findReferences"));
+         assert!(tools.contains("hover"));
+         assert!(tools.contains("getDiagnostics"));
++        assert!(tools.contains("setWorkspaceRoot"));
+     }
+ 
+     #[test]
+     fn test_get_preset_tools_standard() {
+         let tools = get_preset_tools(ToolPreset::Standard);
+-        assert_eq!(tools.len(), 10);
++        assert_eq!(tools.len(), 11);
+         // Should include all minimal tools
+         assert!(tools.contains("goToDefinition"));
+         assert!(tools.contains("getSymbolDefinition"));
+         assert!(tools.contains("findReferences"));
+         assert!(tools.contains("hover"));
+         assert!(tools.contains("getDiagnostics"));
+-        // Plus additional core tools
++        assert!(tools.contains("setWorkspaceRoot"));
+         assert!(tools.contains("findSymbol"));
+         assert!(tools.contains("documentSymbol"));
+         assert!(tools.contains("callHierarchy"));
+@@ -131,7 +135,7 @@ mod tests {
+     #[test]
+     fn test_get_preset_tools_full() {
+         let tools = get_preset_tools(ToolPreset::Full);
+-        assert_eq!(tools.len(), 15);
++        assert_eq!(tools.len(), 16);
+         for tool in ALL_TOOLS {
+             if OPT_IN_TOOLS.contains(tool) {
+                 assert!(
 diff --git a/src/utils/workspace_documents/range.rs b/src/utils/workspace_documents/range.rs
 index 627ebb4..d9bb307 100644
 --- a/src/utils/workspace_documents/range.rs

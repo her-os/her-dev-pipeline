@@ -2,8 +2,8 @@
 name: lsp-setup
 description: |
   为当前代码仓库配置 LSP 代码智能——安装 LSP 语言服务器、配置 Codex LSP MCP、
-  安装 LSP 会话 hook、写入检索规则到项目 CLAUDE.md / AGENTS.md。
-  所有配置写入项目工作目录（.claude/ .codex/），不污染全局。
+  安装可选的 LSP 会话 hook。
+  项目内只写必要本地配置（.lsp-mcp.json / .git/info/exclude / 可选 .claude hook），不生成 AGENTS.md / CLAUDE.md。
   触发场景：lsp-setup、配置 LSP、装 LSP、LSP 不工作、goToDefinition 不能用、
   findReferences 失败、hover 没反应、新项目配环境、开发环境初始化、dev setup。
 ---
@@ -23,7 +23,6 @@ description: |
 | Codex lsp-mcp 二进制 | `~/.codex/tools/lsp-mcp/` | 工具本体全局一份 |
 | Codex lsp-mcp MCP 注册 | `~/.codex/config.toml` | Codex MCP 注册是全局的 |
 | Codex lsp-mcp 项目配置 | **项目** `.lsp-mcp.json` | 每个项目的语言和 preset 不同 |
-| 检索规则 | **项目** `CLAUDE.md` / `.codex/AGENTS.md` | agent 指令跟着项目走 |
 | 本地忽略 | **项目** `.git/info/exclude` | 不改 tracked `.gitignore` |
 
 ## 执行流程
@@ -73,7 +72,7 @@ CODEX_HOME="${CODEX_HOME:-$HOME/.codex}" bash ~/.claude/skills/lsp-setup/scripts
 | **项目** `.lsp-mcp.json` | 按项目语言写入本地配置 |
 | **项目** `.git/info/exclude` | 本地忽略 `.lsp-mcp/`、`.lsp-mcp.json` |
 
-当前补丁修复：stale diagnostics 过滤、documentSymbol 不取 snippet、嵌套符号不逐个 hover、多字节字符 panic。
+当前补丁修复：stale diagnostics 过滤、documentSymbol 不取 snippet、嵌套符号不逐个 hover、多字节字符 panic、`setWorkspaceRoot` 会话级 workspace 切换。
 
 #### 1d. 项目依赖
 
@@ -83,11 +82,19 @@ CODEX_HOME="${CODEX_HOME:-$HOME/.codex}" bash ~/.claude/skills/lsp-setup/scripts
 | `package-lock.json` | `npm ci` |
 | `go.mod` | `go mod download` |
 
-#### 1e. 检索规则
+#### 1e. 项目指令文件
 
-自动检测**项目工作目录**的 `CLAUDE.md` 和 `.codex/AGENTS.md`，没有"代码检索"部分就追加。
-如果 `CLAUDE.md` 已被 Git 跟踪，不自动改它，避免本地 AI 检索说明进团队 PR。
-Codex 版只写当前可用工具集：`documentSymbol`、`goToDefinition`、`findReferences`、`hover`、`getDiagnostics`。
+不再自动生成 `CLAUDE.md` 或 `.codex/AGENTS.md`。项目级 agent 文档很容易漂移并消耗上下文；需要项目规则时，优先维护 tracked 文档（如 `CONTEXT.md` / `docs/`）或全局短规则。
+
+#### 1f. Worktree workspace 切换
+
+安装后的 Codex LSP MCP 内置 `setWorkspaceRoot` 工具。用途：AI 从主目录启动，但本轮要改某个 git worktree 时，先调用一次：
+
+```json
+{"path":"/path/to/worktree"}
+```
+
+之后同一 MCP 进程内的相对路径都从该 worktree 解析，`findReferences` / `documentSymbol` / `getDiagnostics` 等都会使用该 worktree 的 LSP。这个状态只存在于当前 lsp-mcp server 进程；其他 AI 会话不受影响，新会话仍默认使用启动目录。
 
 ### 第 2 步：安装 LSP 会话 hook
 
