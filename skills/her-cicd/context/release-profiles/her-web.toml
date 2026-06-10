@@ -1,0 +1,39 @@
+# Her-Web 发布 Profile
+# Next.js 服务端，CI 构建 GHCR 镜像，手动脚本部署
+
+[project]
+name = "Her-Web"
+# path 在运行时由 Claude 自动检测当前工作目录
+github_owner = "her-os"
+github_repo = "Her-Web"
+branch = "main"
+tag_format = "v{version}"
+build_command = "pnpm build"
+signing_mode = "ci"                      # CI 构建镜像，不需要本地签名
+
+[remotes]
+list = ["origin"]
+
+[ci]
+# tag push 触发 .github/workflows/docker-build.yaml
+# CI 自动：构建 GHCR 镜像（v0.x.y + latest）+ 创建 draft Release
+wait_for_ci = true                       # 发布时等 CI 完成再继续
+
+[deploy]
+# CI 完成后，手动执行部署脚本
+# release.sh <仓库路径> <tag>
+script = "release.sh"
+args_format = "<repo_path> <tag>"        # 两个参数：仓库路径 + tag
+verify_url = "https://hersoul.cn"
+verify_status = 200
+
+[rollback]
+script = "rollback.sh"
+# 或从 GHCR 拉旧镜像回滚
+
+[changelog]
+language = "zh"
+notes_style = "technical"                # 服务端用技术语言即可
+
+[updater]
+verify_endpoints = false                 # 服务端无 updater

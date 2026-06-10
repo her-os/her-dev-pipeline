@@ -1,0 +1,37 @@
+# her-gateway 发布 Profile
+# Go API 网关，CI 构建 GHCR 镜像，手动脚本部署
+
+[project]
+name = "her-gateway"
+# path 在运行时由 Claude 自动检测当前工作目录
+github_owner = "her-os"
+github_repo = "her-gateway"
+branch = "main"
+tag_format = "v{version}"
+build_command = "go build ./..."
+signing_mode = "ci"                      # CI 构建镜像
+
+[remotes]
+list = ["origin"]
+
+[ci]
+# 已有 release.yml，tag push 触发
+wait_for_ci = true
+
+[deploy]
+# deploy.sh 部署 main HEAD（即 tag commit），不接受版本参数
+script = "deploy.sh"
+args_format = ""                         # 无参数
+verify_url = "https://api.tokenic.cn/api/status"
+verify_status = 200
+
+[rollback]
+# 旧代码备份自动保留在服务器 code.bak.* 目录
+# 或从 GHCR 拉旧镜像
+
+[changelog]
+language = "zh"
+notes_style = "technical"
+
+[updater]
+verify_endpoints = false                 # 服务端无 updater

@@ -1,0 +1,57 @@
+# Her Salon 发布 Profile
+# Tauri 2 桌面客户端，本地签名+公证
+
+[project]
+name = "Her Beta"
+# path 在运行时由 Claude 自动检测当前工作目录，通常不需要手动指定
+# 如需显式指定：path = "/your/path/to/her-salon"
+github_owner = "her-os"
+github_repo = "her-salon"
+branch = "main"
+tag_format = "v{version}"
+build_command = "pnpm tauri build"
+signing_mode = "local"
+# slug 自动从 Cargo.toml package name 推导
+
+[local_build]
+secrets_path = "secret/her-salon"
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+windows_runner = "cargo-xwin"
+windows_portable = false
+# 构建脚本在 scripts/ 下：
+#   macOS:   scripts/build-macos-local.sh
+#   Windows: scripts/build-windows-local.sh
+
+[remotes]
+list = ["origin"]
+
+[mirror]
+enabled = true
+host = "hersoul.cn"
+port = 443
+upload_user = "ubuntu"
+# 镜像路径：/opt/releases/her-beta/
+# updater URL: https://hersoul.cn/releases/her-beta/latest.json
+
+platforms = [
+    "darwin-aarch64",
+    "darwin-x86_64",
+    "windows-x86_64",
+]
+
+updater_files = ["latest.json"]
+
+[updater]
+verify_endpoints = true
+# endpoints（来自 tauri.conf.json）：
+#   - https://hersoul.cn/releases/her-beta/latest.json
+#   - https://github.com/her-os/her-salon/releases/latest/download/latest.json
+
+[changelog]
+in_app_file = "src/lib/changelog.ts"
+language = "zh"
+notes_style = "plain_language"

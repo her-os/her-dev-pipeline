@@ -1,0 +1,61 @@
+# 项目发布 Profile 示例
+# 复制此文件并重命名为 {project}.toml，按实际项目配置修改
+# slug 自动从 package.json name 或 Cargo.toml package name 推导
+
+[project]
+name = "MyApp"                           # 项目显示名
+# path = "path/to/project"              # 可选：项目相对路径
+github_owner = "<GITHUB_OWNER>"
+github_repo = "<GITHUB_REPO>"
+branch = "main"
+tag_format = "v{version}"               # e.g. v0.9.0
+build_command = "pnpm tauri build"
+signing_mode = "local"                   # ci | local | none
+# slug = "my-app"                       # 可选：显式覆盖自动推导的 slug
+
+[local_build]
+secrets_path = "secret/myapp"            # 签名密钥存放路径
+targets = [
+    "aarch64-apple-darwin",              # macOS Apple Silicon（原生）
+    "x86_64-apple-darwin",               # macOS Intel（交叉编译）
+    "x86_64-pc-windows-msvc",            # Windows x64（cargo-xwin 交叉编译）
+]
+windows_runner = "cargo-xwin"            # Windows 交叉编译 runner
+windows_portable = true                  # Windows 产物打包为便携 zip
+
+[remotes]
+# push 到这些 remote（按顺序）
+list = ["origin"]
+# 如有镜像 remote，失败不阻断
+# gitee_optional = true
+
+[mirror]
+# 镜像服务器配置（可选）
+enabled = false                          # 设为 true 启用镜像同步
+host = "<MIRROR_HOST>"
+port = 443
+upload_user = "<SSH_USER>"
+# slug = "my-app"                       # 可选：显式覆盖镜像路径 slug
+
+platforms = [
+    "darwin-aarch64",
+    "darwin-x86_64",
+    "windows-x86_64",
+]
+
+updater_files = ["latest.json"]
+
+[gitee]
+# Gitee 镜像（可选）
+enabled = false
+# owner = "<GITEE_OWNER>"
+# repo = "<GITEE_REPO>"
+# upload_assets = false                 # Gitee 免费仓库有容量限制
+
+[updater]
+verify_endpoints = true                  # 发布后验证所有 updater endpoint 版本一致
+
+[changelog]
+in_app_file = "src/lib/changelog.ts"     # 软件内 changelog 文件位置
+language = "zh"                          # zh | en
+notes_style = "plain_language"           # 更新说明用大白话
