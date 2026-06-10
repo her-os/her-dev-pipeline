@@ -6,6 +6,7 @@ description: |
   项目内只写必要本地配置（.lsp-mcp.json / .git/info/exclude / 可选 .claude hook），不生成 AGENTS.md / CLAUDE.md。
   触发场景：lsp-setup、配置 LSP、装 LSP、LSP 不工作、goToDefinition 不能用、
   findReferences 失败、hover 没反应、新项目配环境、开发环境初始化、dev setup。
+disable-model-invocation: true
 ---
 
 # LSP Setup

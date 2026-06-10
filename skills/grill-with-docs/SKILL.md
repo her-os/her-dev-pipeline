@@ -13,7 +13,13 @@ If a question can be answered by exploring the codebase, database, or documentat
 
 ## Decision tree loop (mandatory)
 
-On start: identify the initial branches of the decision tree from the user's plan. Then enter the loop:
+On start:
+
+1. **Domain reframe**: The user's request names a specific location (page, endpoint, table, module). Translate it to the domain rule or concept underneath, and identify which layers must enforce it (client, server, database, etc.). The tree root must be the domain concept, not the implementation site. Examples: "add email validation to signup page" → "auth input validation rules" × [client UX, server security]; "add rate limiting to /api/checkout" → "payment endpoint protection policy" × [server middleware, gateway]; "add soft-delete to the orders table" → "order lifecycle state transitions" × [API, database, UI state display].
+2. **Coverage scan**: Search the codebase across every layer identified above. Horizontally: find sibling surfaces the same rule should govern — "add email validation to signup page" must also check login page, password-reset page, auth modal, and any other form that accepts the same fields. Vertically: check whether each enforcement layer already implements the rule (e.g. does the auth server already reject short passwords?) or needs it added. Add every missing surface or layer to the tree before asking the first question.
+3. Build the initial decision branches from the domain-scoped framing.
+
+Then enter the loop:
 
 ```
 while unresolved(decision_tree):
@@ -23,7 +29,6 @@ while unresolved(decision_tree):
     resolve(branch, answer)
     if crystallised_term(answer):  update_context_md(term)
     if crystallised_adr(answer):  maybe_write_adr(decision)
-    # user's answer may reveal new sub-decisions → add to tree
     if reveals_new_decisions(answer):
         add_branches(decision_tree, new_branches)
     next = has_deeper(branch) ? drill(branch) : next_sibling(branch)
