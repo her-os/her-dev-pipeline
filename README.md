@@ -1,6 +1,10 @@
 # Her AI 开发管线
 
-15 个 skill 组成的完整 AI 辅助开发流程，适用于 Claude Code 和 Codex。
+17 个 skill 组成的完整 AI 辅助开发流程，适用于 Claude Code 和 Codex。
+
+> **本仓库是 skill 的唯一源**（2026-06-11 起）：`~/.claude/skills/` 通过软链接指向本仓库，`~/.codex/skills/` 再链到 `~/.claude/skills/`。改 skill = 改本仓库工作区，直接 commit + push；同事 `git pull` 即获得更新。旧的 `sync.sh` 拷贝模式已废弃。
+>
+> 除 15 个通用管线 skill 外，含 `her-cicd`（发布/部署）和 `her-ops`（服务器运维）两个内部 skill，内含生产环境信息，仓库保持私有。
 
 ## 安装
 
