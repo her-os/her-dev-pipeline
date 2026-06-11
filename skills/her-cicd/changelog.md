@@ -234,3 +234,7 @@
 ### 2026-06-11 CI 政策：PR 只跑 Codex review
 
 > Her-Web ci.yml 改 workflow_dispatch only、docker-build 去 PR 触发（用户裁决，代码验证本地跑）；PR #249。gateway #15/#16 修 external_billing admin-only + violation fee 短路并重部署 test。回滚：revert #249。
+
+### 2026-06-11 P3 W3 迁移脚本合 dev + test 演练
+
+> feat/refactor-p3 PR #254 merge 合 dev → deploy-test（ab9a3f5）→ test 克隆库全量迁移演练全绿。回滚：`rollback-pre-traffic.ts --execute`（test 克隆库）。
