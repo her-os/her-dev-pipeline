@@ -27,7 +27,7 @@ SESSION_ID=$(ls -t ~/.claude/projects/$(echo "$PWD" | sed 's|/|-|g')/*.jsonl 2>/
 
 - **topic-slug**: lowercase, hyphen-separated, 2-4 words describing the task (e.g., `invite-email`, `lifecycle-pipeline`, `edgeone-cdn`). Not required to include issue numbers — handoffs cover dev, research, planning, ops, anything.
 - **MMDD**: month-day the handoff was created.
-- **Same topic, new session**: update the existing handoff file, don't create a new one alongside it. Update the session ID in the header + Current state + Next steps.
+- **Same topic, new session**: update the existing handoff file, don't create a new one alongside it. Update header + Current state + Next steps. Session IDs accumulate: old `Previous session` moves into `Prior sessions` (newest first), never dropped.
 - If the user specified a path, use that instead.
 
 The handoff document must include:
@@ -38,6 +38,7 @@ The handoff document must include:
 Previous session: <SESSION_ID>
 JSONL: ~/.claude/projects/<project-dir>/<SESSION_ID>.jsonl
 To review: use /agent-log skill with the JSONL path above
+Prior sessions: <older IDs, newest first>   ← omit if first session
 ```
 
 ### Body (always)
