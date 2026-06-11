@@ -37,7 +37,9 @@ GATEWAY_DOCKER_PLATFORM="${GATEWAY_DOCKER_PLATFORM:-linux/amd64}"
 PUBLIC_IP="${PUBLIC_IP:-192.144.187.174}"
 WEB_PUBLIC_PORT="${WEB_PUBLIC_PORT:-31080}"
 GW_PUBLIC_PORT="${GW_PUBLIC_PORT:-31081}"
-WEB_URL="${WEB_URL:-http://$PUBLIC_IP:80}"
+WEB_URL="${WEB_URL:-https://test.hersoul.cn}"
+# IP 直连入口仍可用：加入 better-auth trustedOrigins，浏览器从 IP 进也能过 origin 校验
+AUTH_TRUSTED_ORIGINS="${AUTH_TRUSTED_ORIGINS:-http://$PUBLIC_IP,http://$PUBLIC_IP:80}"
 API_URL="${API_URL:-http://$PUBLIC_IP:80/test-gateway}"
 
 usage() {
@@ -195,12 +197,14 @@ require_test_web_target() {
     echo "ERROR: refusing to operate on production service her-herweb-a8y5ka" >&2
     exit 1
   fi
-  if [[ "$WEB_URL" == *"hersoul.cn"* ]]; then
-    echo "ERROR: refusing production NEXT_PUBLIC_APP_URL/WEB_URL: $WEB_URL" >&2
-    exit 1
-  fi
   case "$WEB_URL" in
-    "http://$PUBLIC_IP:80"|"http://$PUBLIC_IP"|"http://roome.cn"|"https://roome.cn"|"http://www.roome.cn"|"https://www.roome.cn")
+    "https://hersoul.cn"|"http://hersoul.cn"|"https://www.hersoul.cn"|"http://www.hersoul.cn")
+      echo "ERROR: refusing production NEXT_PUBLIC_APP_URL/WEB_URL: $WEB_URL" >&2
+      exit 1
+      ;;
+  esac
+  case "$WEB_URL" in
+    "https://test.hersoul.cn"|"http://$PUBLIC_IP:80"|"http://$PUBLIC_IP"|"http://roome.cn"|"https://roome.cn"|"http://www.roome.cn"|"https://www.roome.cn")
       ;;
     *)
       echo "ERROR: WEB_URL must be the test IP route or test domain, got: $WEB_URL" >&2
@@ -968,6 +972,7 @@ NEXT_PUBLIC_API_GATEWAY_QUOTA_PER_UNIT=500000
 AUTH_URL=$WEB_URL
 AUTH_SECRET=\${AUTH_SECRET}
 AUTH_RATE_LIMIT_ENABLED=false
+AUTH_TRUSTED_ORIGINS=$AUTH_TRUSTED_ORIGINS
 DATABASE_PROVIDER=postgres
 DATABASE_URL=\${WEB_DB_URL}
 DB_SINGLETON_ENABLED=true

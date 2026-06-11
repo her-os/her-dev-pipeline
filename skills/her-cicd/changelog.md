@@ -214,3 +214,15 @@
 ### 2026-06-10 P2 审计修复轮合 dev 并部署 test
 
 > PR #244（saveConfigs 未改动不落行，防 env 兜底被 UI 保存固化）合入 dev `60823ee`，deploy-test + verify-web-gateway ok，deployed E2E 红转绿。回滚：`从 dev revert merge commit 后重跑 deploy-test.sh deploy-web`。
+
+### 2026-06-11 P3-W1 合 dev 并部署 test（PR #247）
+
+> naming prep + quota 新表 schema 合入 dev（`2b07b9e`，GitHub org 账单挡 CI，用户裁决 admin bypass，CI/Codex 补跑义务挂起）→ deploy-web + verify-web-gateway 通过；test 库手工应用两新表 DDL（空表）。回滚：`DROP TABLE pool_transaction; DROP TABLE quota_pool;` + `docker service update --rollback her-web-test`。
+
+### 2026-06-11 test AUTH_URL 切域名修复浏览器登录
+
+> deploy-test.sh WEB_URL 默认 IP→`https://test.hersoul.cn`（AUTH_URL/app_url/支付回调跟随），新增 `AUTH_TRUSTED_ORIGINS` 保留 IP 入口浏览器登录，安全闸改精确拦生产域名；config 表三行同步改域名，deploy-web 重建后两入口登录 POST 均过 origin 校验。回滚：`WEB_URL=http://192.144.187.174:80 deploy-test.sh deploy-web <worktree>` + config 表改回 IP。
+
+### 2026-06-11 P3-G1 gateway external-billing 合 dev 并部署 test（her-gateway PR #14）
+
+> token 级 external_billing meter-only path 合入 dev（`22ba27813`，账单挡 CI 继续 bypass）→ deploy-gateway 成功（bun integrity 抖动重试一次）；test 栈四条验收全过，wallet 回归无变化。回滚：`sudo docker service update --image her-gateway:test-prev her-gateway-test`（或重部署旧 dev）。
