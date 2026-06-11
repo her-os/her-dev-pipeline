@@ -83,6 +83,7 @@
 |------|--------|------|---------|
 | `api.tokenic.cn` | Let's Encrypt (R13) | 有效 ✅ | 2026-07-08 |
 | `api.roome.cn` | TRAEFIK DEFAULT CERT | 自签名 ❌ | — |
+| `test.hersoul.cn` | Let's Encrypt (YR2) | 有效 ✅ | 2026-09-09 |
 | `dok.tokenic.cn` | Let's Encrypt | 有效 ✅ | （待确认） |
 | `dok.roome.cn` | Let's Encrypt | 有效 ✅ | （待确认） |
 | `relay.tokenic.cn` | Let's Encrypt | 有效 ✅ | （待确认） |

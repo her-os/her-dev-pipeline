@@ -15,6 +15,7 @@
 |------|-----------|------|
 | `api.tokenic.cn` | Let's Encrypt (R13) | gateway API 端点 |
 | `hersoul.cn` | Let's Encrypt | her-web 产品前端 |
+| `test.hersoul.cn` | Let's Encrypt | test 环境（web + /test-gateway），2026-06-11 起 |
 | `club.hersoul.cn` | Let's Encrypt | herclub 会员页 |
 
 ### 步骤

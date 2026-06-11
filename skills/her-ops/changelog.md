@@ -1128,3 +1128,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-04 gateway MiMo affinity soft limit
 
 > 生产 `channel_affinity_setting.rules` 的 `mimo coding plan cache` 增 `active_channel_soft_limit=5`，TTL 保持 `1800`；随 gateway v0.13.1 重启加载。回滚：把该规则的 `active_channel_soft_limit` 删除或设为 `0` 后重启 `new-api`。
+
+### 2026-06-11 test 环境启用 HTTPS（test.hersoul.cn）
+
+> EdgeOne DNS 加 A 记录 `test.hersoul.cn → 192.144.187.174`（record-3r7ppdvkyw1o，仅 DNS 不加速），`her-test.yml` 加 4 个 domain router（web/websecure × web/test-gateway），Let's Encrypt 证书签发成功（到期 2026-09-09）。IP HTTP 入口保留为备用。回滚：`sudo cp /etc/dokploy/traefik/dynamic/her-test.yml.bak-20260611-https /etc/dokploy/traefik/dynamic/her-test.yml` + tccli 删 DNS 记录。
