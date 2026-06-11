@@ -226,3 +226,11 @@
 ### 2026-06-11 P3-G1 gateway external-billing 合 dev 并部署 test（her-gateway PR #14）
 
 > token 级 external_billing meter-only path 合入 dev（`22ba27813`，账单挡 CI 继续 bypass）→ deploy-gateway 成功（bun integrity 抖动重试一次）；test 栈四条验收全过，wallet 回归无变化。回滚：`sudo docker service update --image her-gateway:test-prev her-gateway-test`（或重部署旧 dev）。
+
+### 2026-06-11 W2 quota 管线核心合入 dev 并部署 test
+
+> Her-Web PR #248（enforce-v2/settle/worker，纯新增）admin bypass 合入 dev `4cae8f2` → deploy-web + verify-web-gateway PASS。回滚：revert merge commit 后重跑 deploy-web。
+
+### 2026-06-11 CI 政策：PR 只跑 Codex review
+
+> Her-Web ci.yml 改 workflow_dispatch only、docker-build 去 PR 触发（用户裁决，代码验证本地跑）；PR #249。gateway #15/#16 修 external_billing admin-only + violation fee 短路并重部署 test。回滚：revert #249。
