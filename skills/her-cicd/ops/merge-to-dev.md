@@ -66,7 +66,7 @@ QUIET=1 bash ~/.claude/skills/her-cicd/scripts/her-web/deploy-test.sh deploy-gat
 
 ```
 dev 现在包含了 <branch-name>，测试环境已部署。
-测试入口：http://192.144.187.174:80
+测试入口：https://test.hersoul.cn
 主要测试点：[简述新功能]
 ```
 

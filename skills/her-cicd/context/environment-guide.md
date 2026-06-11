@@ -21,7 +21,7 @@
 
 ## Test 测试栈
 
-入口：`http://192.144.187.174:80`（IP 直访，不依赖域名）
+入口：`https://test.hersoul.cn`（首选，Let's Encrypt 证书）；备用 `http://192.144.187.174:80`（IP 直访）
 
 ### 服务架构
 
@@ -54,8 +54,8 @@ her-gateway-test（Swarm）
 
 ### 非开发同事测试
 
-- **Web 功能**：直接访问 `http://192.144.187.174:80`
-- **salon 独有功能**：需开发者打一个测试版（`HER_API_BASE_URL=http://192.144.187.174:80 cargo tauri build`），安装包发给测试同事
+- **Web 功能**：直接访问 `https://test.hersoul.cn`
+- **salon 独有功能**：需开发者打一个测试版（`HER_API_BASE_URL=https://test.hersoul.cn cargo tauri build`），安装包发给测试同事
 
 ## 分支与数据库对应
 

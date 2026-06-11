@@ -99,8 +99,8 @@ $CICD/her-web/deploy-test.sh status
 $CICD/her-web/deploy-test.sh verify-web-gateway
 
 # HTTP 检查
-curl -s http://192.144.187.174:80/zh/pricing
-curl -s http://192.144.187.174:80/test-gateway/api/status
+curl -s https://test.hersoul.cn/zh/pricing
+curl -s https://test.hersoul.cn/test-gateway/api/status
 ```
 
 不要把 `/zh/pricing` 200 当作部署完成——必须看 `verify-web-gateway` 通过（检查 gateway service 1/1 + web 容器能访问 gateway + active token 在 gateway DB 存在）。
@@ -174,15 +174,6 @@ $CICD/her-web/deploy-test.sh write-routes
 ---
 
 ## 排障
-
-### 公网 roome.cn 被 DNSPod 302
-
-域名未备案，公网 HTTP 被 block page 拦截。用 IP 入口或 SSH 隧道：
-
-```bash
-/usr/bin/ssh -N -L 18080:127.0.0.1:80 ubuntu@192.144.187.174
-curl --resolve www.roome.cn:18080:127.0.0.1 http://www.roome.cn:18080/zh/pricing
-```
 
 ### Token binding 失效（401 Invalid token）
 

@@ -12,7 +12,7 @@
 
 阶段二：测试环境联调（test 测试栈）
 ├── Her-Web feat → dev → deploy-test.sh deploy-web 部署
-├── salon API 地址切到 http://192.144.187.174:80 联调
+├── salon API 地址切到 https://test.hersoul.cn 联调
 ├── 非开发同事在测试环境体验新功能
 └── 有问题回 feat 修，重新部署 dev
 

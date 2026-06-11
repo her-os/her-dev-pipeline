@@ -37,7 +37,7 @@ CTX=$SKILL_DIR/context      # 背景知识（正常不读）
 | 仓库 | 本地路径 | 服务器容器 | 域名 |
 |------|----------|-----------|------|
 | her-gateway | `her-gateway` | `new-api` + `redis` (Dokploy compose) | `api.tokenic.cn` |
-| her-web | `her-web` | **生产** `her-herweb-a8y5ka` (Swarm) / **测试** `her-web-test` (Swarm) | `hersoul.cn` / IP 直连 |
+| her-web | `her-web` | **生产** `her-herweb-a8y5ka` (Swarm) / **测试** `her-web-test` (Swarm) | `hersoul.cn` / `test.hersoul.cn` |
 | herclub | `herclub` | `herclub` (Swarm) | `club.hersoul.cn` |
 | salon | `salon` | 本地 Tauri/Vite | - |
 | 基础设施 | - | `dokploy-traefik` + `dokploy` | `dok.tokenic.cn` |
