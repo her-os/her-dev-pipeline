@@ -238,3 +238,7 @@
 ### 2026-06-11 P3 W3 迁移脚本合 dev + test 演练
 
 > feat/refactor-p3 PR #254 merge 合 dev → deploy-test（ab9a3f5）→ test 克隆库全量迁移演练全绿。回滚：`rollback-pre-traffic.ts --execute`（test 克隆库）。
+
+### 2026-06-11 W3 实现整体回退（用户裁定重做）
+
+> feat/refactor-p3 force push 回 `a93c815`（W3 实现前），完整备份 `backup/w3-rollback-0611`（d3790ca）已推远端；dev 保留 PR #254、test 不重部署（用户裁定）。重做入口：`her-web docs/handoff-w3-redo-0611.md`。回滚（取回 W3 实现）：`git reset --hard d3790ca`。
