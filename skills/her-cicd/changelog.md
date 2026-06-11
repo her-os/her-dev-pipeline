@@ -242,3 +242,7 @@
 ### 2026-06-11 W3 实现整体回退（用户裁定重做）
 
 > feat/refactor-p3 force push 回 `a93c815`（W3 实现前），完整备份 `backup/w3-rollback-0611`（d3790ca）已推远端；dev 保留 PR #254、test 不重部署（用户裁定）。重做入口：`her-web docs/handoff-w3-redo-0611.md`。回滚（取回 W3 实现）：`git reset --hard d3790ca`。
+
+### 2026-06-11 W3 回退收尾：test 双库从生产重刷 + 本地 rehearsal 重置
+
+> 清理上一轮 W3 演练残留：refresh-gateway-db → refresh-web-db（顺序必须 gateway 先，否则 web 应用会在 gateway 重建窗口自动 re-provision 写出悬空绑定）→ verify-web-gateway 全绿；克隆库补回 quota_pool/pool_transaction 空表 DDL（dev 构建的 quota worker 需要）；本地 her_web_rehearsal 用 golden TEMPLATE 重置；test 会话已清空（已登录的测试账号需重新登录）。已知问题：deploy-test.sh 内置 repair_test_web_gateway_bindings 的 psql() 只取首行，COPY 多行绑定只修第 1 条，依赖它兜底会漏修。回滚：无需（恢复性操作）。
