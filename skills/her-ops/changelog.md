@@ -1148,3 +1148,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-12 K8s 零中断发布配置（her-web 探针 + 双服务 preStop）
 
 > her 命名空间获开发权限后：her-web 加 readinessProbe(/zh:3000)+maxUnavailable=0，her-web/gateway 加 preStop sleep 15 → 滚动更新逐秒探测 0 失败（改前 her-web 每次发布断流 ~2s）。回滚：`kubectl apply -f ~/.config/her/backup-her-{web,gateway}-deploy-*.yaml`。
+
+### 2026-06-12 her-test.yml 清理 roome.cn 废路由
+
+> 删除 4 个 roome 路由块（her-test-web-router / her-test-api-router 及 websecure），test.hersoul.cn web+gateway 验证 200。回滚：`sudo cp /etc/dokploy/traefik/dynamic/her-test.yml.bak-20260612-roome-cleanup /etc/dokploy/traefik/dynamic/her-test.yml`。遗留：生产 new-api 容器 Docker label 仍有 api.roome.cn（ACME 日志噪音），清理需重建容器 ~30s 中断，留到 DNS 切换后做。
