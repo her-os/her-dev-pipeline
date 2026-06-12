@@ -263,3 +263,7 @@
 ### 2026-06-12 W4 修复窗口：her-web + gateway 双部署 test
 
 > her-web PR #266（BUG-001/003/005 修复）合 dev 部署 test（source=e975eda）；her-gateway PR #17（上游 X-Oneapi-Request-Id 透传覆盖修复）合 dev 部署 test。探针全绿。回滚：`docker service update --image her-web:test-prev her-web-test`（gateway 同理 test-prev）。
+
+### 2026-06-13 BUG-007 修复合 dev 并部署 test
+
+> her-web PR #267（feat/refactor-p3 5ae6e97，stacked 第二轮，merge commit）合 dev=e844812 → deploy-web test 栈 + verify-web-gateway 通过。回滚：重部署 her-web:test-prev 镜像。
