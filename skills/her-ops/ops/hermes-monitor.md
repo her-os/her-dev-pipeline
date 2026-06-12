@@ -15,6 +15,11 @@
 | her-patrol | every 15m | no-agent（零 token） | 健康→静默；异常→**人话模板告警**（业务名+影响+建议，1h 去重）；恢复→报平安。含渠道主动测试（逐个真实调上游 test 接口，~1min/轮） |
 | her-gateway-errwatch | every 5m | no-agent + 按需 AI | 查 gateway 最近 5 分钟错误日志。回声过滤（channel test/zhipu monitor 等自家监控产生的日志）→ GIN 4xx 聚合（≥100/5min 才报）→ 真错误交 `hermes -z -t todo`（禁工具防注入）翻译成人话发飞书。无错完全静默，AI 只在有真错误时调用 |
 | her-daily-report | `0 1 * * *` UTC = 北京 09:00 | agent | 读巡检日志写中文日报发飞书 |
+| her-cloud-watch | `30 0 * * *` UTC = 北京 08:30 | no-agent（零 token） | 云资源/资金日检：腾讯云余额（<3000 元告警）、CVM/云 PG 到期（<10 天提醒）、SSL 托管证书（<14 天）、搬瓦工流量（KiwiVM API，≥80%）、丽萨流量（vnstat 受限通道，≥2400G/3000G）。有问题才发，无事静默（结果写 `her-cloud-watch.log` 供日报引用） |
+
+**腾讯云接入**：VPS `/root/tccli-venv/bin/tccli`，只读子账号 `her-ops`（UIN 100049758963，6 个策略：CVM/PG/Monitor/SSL/账单只读 + 自定义 `hermes-balance-readonly` 余额只读）。凭据 `/root/.tccli/default.credential`。patrol 内置云 PG 指标检查（磁盘≥80 红、连接≥80 黄、CPU≥90 黄）和 CVM 按需诊断（仅探活失败时调 API 区分机器停了/服务挂了，平时零调用）。
+**丽萨受限通道**：VPS key `~/.ssh/lisa-traffic_ed25519` → lisa-sea（104.247.120.130:3944）forced command `/usr/local/bin/traffic-report.sh`，只返回 vnstat 月流量。
+**搬瓦工**：KiwiVM API 凭据放 `/root/.hermes/secrets/bwg-kiwivm.env`（`BWG_VEID`/`BWG_APIKEY`），文件存在时 cloud-watch 自动启用。
 
 **告警设计原则（最高约束）**：消息单位是「事件+影响+是否需要行动」，不是日志行。日志原文永不进消息正文（存档在 VPS `~/.hermes/logs/her-gateway-errwatch-raw.log` 和 `her-patrol.log`，对话追查用）。同根因只报一次：渠道好坏由 patrol 主动测试权威判定，errwatch 必须过滤渠道测试产生的回声日志。
 

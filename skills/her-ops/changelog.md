@@ -1151,6 +1151,10 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 
 > 圣何塞 VPS 的 Hermes v0.13→v0.16 升级 + ChatGPT 重登 + 飞书接入（白名单+home chat）；新增 cron `her-patrol`（15min 只读巡检，静默/告警/恢复三态）与 `her-daily-report`（北京 09:00 日报），生产机仅暴露 forced-command 只读检查脚本（实测无法执行任意命令）。详见 `ops/hermes-monitor.md`。回滚：`hermes cron pause her-patrol her-daily-report`。
 
+### 2026-06-12 Hermes 接入腾讯云监控 + 办公出口流量监控
+
+> 新建腾讯云只读子账号 her-ops（4 预设只读策略 + QcloudFinanceBillReadOnlyAccess + 自定义 hermes-balance-readonly 余额只读），密钥配在圣何塞 VPS tccli。新增 cron `her-cloud-watch`（北京 08:30 日检：余额<3000 告警/CVM·PG 到期<10 天/SSL 托管证书<14 天/搬瓦工·丽萨流量≥80%）。patrol v6 加云 PG 指标（磁盘/连接/CPU，腾讯云监控 API）与 CVM 按需诊断（探活失败才查，区分机器停/服务挂）。丽萨装 vnstat + forced-command 受限通道（月配额 3000G，当前月均约 1180G）。顺手发现：edge-vpngw 两台 6/21 到期（已设自动续费，余额 2.9 万充足）。搬瓦工 KiwiVM key 待用户提供（脚本钩子已留）。
+
 ### 2026-06-12 Hermes 告警体系重构：人话化 + 渠道主动测试 + 回声过滤
 
 > 用户反馈告警不可读后重构。patrol v5：渠道主动测试并入（VPS 直连 Admin API 逐渠道调 `/api/channel/test/<id>`，~54s/20 渠道），全部告警人话模板化（业务名+影响+建议）。errwatch v4：回声过滤（自家渠道测试产生的 `channel test bad response` 日志不再当错误报——此前形成监控回声循环）、GIN 4xx 聚合 ≥100 才报、真错误用 `hermes -z -t todo` AI 翻译成人话（禁工具防日志注入，仅有错时调用）。生产机 SSH 菜单收缩为 status/logs/db-stats/gateway-errors（gateway 业务操作回归 Admin API）。首轮渠道测试发现 ch22(401 key 失效)/ch12/ch6(403) 三个坏渠道。核心原则：消息单位=事件+影响+是否需行动，日志原文永不进消息。
