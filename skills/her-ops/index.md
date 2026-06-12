@@ -37,6 +37,7 @@
 | [ops/db-connection-fail.md](ops/db-connection-fail.md) | 黄灯 | 数据库连接失败诊断 |
 | [ops/container-repeated-crash.md](ops/container-repeated-crash.md) | 黄灯 | 容器重启后仍然挂 |
 | [ops/k8s-cluster-access.md](ops/k8s-cluster-access.md) | 绿灯（只读） | TKE 集群连接（SSH 隧道 + kubectl）、kubeconfig 生成、RBAC 权限状态 |
+| [ops/k8s-dns-switchover.md](ops/k8s-dns-switchover.md) | 黑灯 | DNS 切换到 K8s 的 runbook、回滚命令、切换后清单（roome label / TCR 迁移 / 证书续期） |
 | [ops/hermes-monitor.md](ops/hermes-monitor.md) | 绿灯（只读） | Hermes 7x24 值守监控：圣何塞 VPS 巡检生产机，飞书告警 + 每日 09:00 日报 |
 
 ---
