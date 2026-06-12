@@ -1144,3 +1144,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-12 Hermes 7x24 值守监控上线（圣何塞 VPS → 飞书）
 
 > 圣何塞 VPS 的 Hermes v0.13→v0.16 升级 + ChatGPT 重登 + 飞书接入（白名单+home chat）；新增 cron `her-patrol`（15min 只读巡检，静默/告警/恢复三态）与 `her-daily-report`（北京 09:00 日报），生产机仅暴露 forced-command 只读检查脚本（实测无法执行任意命令）。详见 `ops/hermes-monitor.md`。回滚：`hermes cron pause her-patrol her-daily-report`。
+
+### 2026-06-12 K8s 零中断发布配置（her-web 探针 + 双服务 preStop）
+
+> her 命名空间获开发权限后：her-web 加 readinessProbe(/zh:3000)+maxUnavailable=0，her-web/gateway 加 preStop sleep 15 → 滚动更新逐秒探测 0 失败（改前 her-web 每次发布断流 ~2s）。回滚：`kubectl apply -f ~/.config/her/backup-her-{web,gateway}-deploy-*.yaml`。

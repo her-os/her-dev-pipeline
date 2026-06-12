@@ -32,7 +32,7 @@ tccli tke DescribeClusterKubeconfig --region ap-beijing --ClusterId cls-4n0yzaz7
 | 层 | 状态 |
 |----|------|
 | CAM（腾讯云侧） | ✅ 子账号 UIN 100046064896 已有 TKE/TCR/billing/CLB/CVM/VPC 只读 |
-| 集群内 RBAC | ✅ 只读已授权（2026-06-12），kubectl get/describe/logs 可用 |
+| 集群内 RBAC | ✅ `her` 命名空间开发人员权限（2026-06-12，可读写 Deployment/exec），集群级仍只读 |
 
 ## 部署链路 / 紧急通道
 
@@ -41,5 +41,5 @@ tccli tke DescribeClusterKubeconfig --region ap-beijing --ClusterId cls-4n0yzaz7
 ## 已查实（2026-06-12）
 
 - 轮询 = keel（ns `keel`），1 分钟一查，盯 `main` tag，policy force
-- gateway 探针完善；**her-web 无探针**（待 idoubi 加 readinessProbe）
+- 零中断发布已配齐：her-web readinessProbe + 两服务 preStop sleep 15（2026-06-12 实测滚动 0 失败；改 Deployment 前先 `kubectl get deploy -o yaml` 备份到 `~/.config/her/`）
 - her-web env 走 ConfigMap `her-web-env`，FEISHU_* 等全齐

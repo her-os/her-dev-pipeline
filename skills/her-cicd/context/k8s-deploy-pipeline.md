@@ -34,7 +34,7 @@
 
 1. **轮询机制 = keel**（集群内工具），`trigger: poll`，**间隔 1 分钟**，policy force。
 2. **盯 `main` tag**（her-web 和 gateway 都是 `her-tcr.../xxx:main`）→ **合并 main 即发布生产**（2026-06-12 用户拍板维持此模式）。打 tag 仅留档/回滚锚点，在合并后照常打。纪律：**合 main = 按下发布键**，不允许"先合后发"。
-3. **探针**：gateway 配置完善（readiness+liveness `/api/status`，maxUnavailable=0，真零停机）；**her-web 无任何探针** → 换容器瞬间有数秒断流风险。需 idoubi 给 her-web 加 readinessProbe（GET /zh 或健康端点，port 3000）+ `maxUnavailable: 0`。
+3. **零中断发布已配齐并实测（2026-06-12，我方用 her 命名空间开发权限操作）**：her-web 加 readinessProbe（GET /zh:3000）+ maxUnavailable=0；her-web 和 gateway 都加 preStop `sleep 15`（解决 CLB 摘除延迟导致的换容器瞬间 1-2 秒断流）。两服务滚动全程逐秒探测 0 失败。改前备份在 `~/.config/her/backup-her-*-deploy-*.yaml`。
 4. **环境变量已齐**：K8s her-web 的 env 通过 ConfigMap `her-web-env` 挂载，FEISHU_*、CRON_SECRET、HER_INTERNAL_RATE_LIMIT_BYPASS_TOKEN、AUTH_RATE_LIMIT_ENABLED 等全在（6/8 缺配置问题已修复）。
 5. 查"线上跑哪个 commit"：`kubectl describe pod -n her -l app=her-web | grep Image:`（image digest 对应 `sha-<commit>` tag）。集群访问方法 → her-ops `ops/k8s-cluster-access.md`。
 
