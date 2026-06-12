@@ -1140,3 +1140,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-12 K8s 迁移调查 + 集群访问通道建立
 
 > 实测确认：K8s（cls-4n0yzaz7）与 CVM 共用云 PG 172.17.255.75 同两库（pg_stat_activity 验证）；K8s 部署=轮询 TCR 无 webhook；TCR=企业版基础版 664/月（计划迁广州个人版）。新增 `ops/k8s-cluster-access.md`（kubeconfig+隧道，RBAC 待管理员授权）。部署链路详见 her-cicd `context/k8s-deploy-pipeline.md`。
+
+### 2026-06-12 Hermes 7x24 值守监控上线（圣何塞 VPS → 飞书）
+
+> 圣何塞 VPS 的 Hermes v0.13→v0.16 升级 + ChatGPT 重登 + 飞书接入（白名单+home chat）；新增 cron `her-patrol`（15min 只读巡检，静默/告警/恢复三态）与 `her-daily-report`（北京 09:00 日报），生产机仅暴露 forced-command 只读检查脚本（实测无法执行任意命令）。详见 `ops/hermes-monitor.md`。回滚：`hermes cron pause her-patrol her-daily-report`。
