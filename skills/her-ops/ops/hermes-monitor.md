@@ -13,6 +13,7 @@
 | 任务 | 调度 | 模式 | 行为 |
 |------|------|------|------|
 | her-patrol | every 15m | no-agent（零 token） | 健康→静默；异常→飞书告警（同内容 1h 去重）；恢复→报平安一次 |
+| her-gateway-errwatch | every 5m | no-agent（零 token） | 查 gateway 最近 5 分钟错误日志，过滤噪音（client_gone/eof/计费 INFO/2xx 行），有真实错误→飞书（同组错误 1h 去重），无→静默 |
 | her-daily-report | `0 1 * * *` UTC = 北京 09:00 | agent | 读巡检日志写中文日报发飞书 |
 
 ## 检查范围
@@ -51,6 +52,7 @@ hermes update --yes --backup         # 升级（自动 drain + 重启 gateway）
 ## 已知坑
 
 - 海外探活 hersoul.cn 返回 307（→/zh）、club.hersoul.cn 301（并入主站路径）——不是故障，是语言/合站重定向，探活必须 `-L` 跟随看最终码（2026-06-12 首跑误报）
+- grep gateway 日志抓 5xx 必须加词边界 `\b(429|500|502|503|504)\b`——request_id 是长数字串，裸数字匹配会误中（如 `2035048` 含 504）。`stream ended: reason=eof`、`client_gone`、`record consume log` 都是正常业务行，要过滤
 - gateway 进程是 cron 调度单点：systemd 自动重启兜底，但 gateway 挂掉这件事它自己发现不了（后续可加外部对 VPS 的探活）
 - ChatGPT OAuth 凭据会过期（上次 5/31 失效）：掉登录后日报任务失败但 her-patrol 不受影响（no-agent 不走模型）。重登：`hermes auth add openai-codex --type oauth --no-browser`，把设备码 URL 转给用户
 
