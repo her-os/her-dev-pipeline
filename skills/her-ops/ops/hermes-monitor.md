@@ -12,9 +12,13 @@
 
 | 任务 | 调度 | 模式 | 行为 |
 |------|------|------|------|
-| her-patrol | every 15m | no-agent（零 token） | 健康→静默；异常→飞书告警（同内容 1h 去重）；恢复→报平安一次 |
-| her-gateway-errwatch | every 5m | no-agent（零 token） | 查 gateway 最近 5 分钟错误日志，过滤噪音（client_gone/eof/计费 INFO/2xx 行），有真实错误→飞书（同组错误 1h 去重），无→静默 |
+| her-patrol | every 15m | no-agent（零 token） | 健康→静默；异常→**人话模板告警**（业务名+影响+建议，1h 去重）；恢复→报平安。含渠道主动测试（逐个真实调上游 test 接口，~1min/轮） |
+| her-gateway-errwatch | every 5m | no-agent + 按需 AI | 查 gateway 最近 5 分钟错误日志。回声过滤（channel test/zhipu monitor 等自家监控产生的日志）→ GIN 4xx 聚合（≥100/5min 才报）→ 真错误交 `hermes -z -t todo`（禁工具防注入）翻译成人话发飞书。无错完全静默，AI 只在有真错误时调用 |
 | her-daily-report | `0 1 * * *` UTC = 北京 09:00 | agent | 读巡检日志写中文日报发飞书 |
+
+**告警设计原则（最高约束）**：消息单位是「事件+影响+是否需要行动」，不是日志行。日志原文永不进消息正文（存档在 VPS `~/.hermes/logs/her-gateway-errwatch-raw.log` 和 `her-patrol.log`，对话追查用）。同根因只报一次：渠道好坏由 patrol 主动测试权威判定，errwatch 必须过滤渠道测试产生的回声日志。
+
+**架构边界**：gateway 业务操作（渠道列表/测试/quota）直连 Admin API（`https://api.tokenic.cn/api/`，token 在 VPS 脚本与 skill 内）；SSH 受限通道只取必须登机器的信息（容器状态/容器日志/磁盘/DB 聚合指标），菜单仅 status/logs/db-stats/gateway-errors 四个子命令。
 
 ## 检查范围
 

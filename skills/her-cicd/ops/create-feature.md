@@ -30,6 +30,16 @@ git checkout -b feat/your-feature-name
 | her-gateway | `docker-compose up`（本地 PG）或 SQLite fallback |
 | her-salon | `cargo tauri dev`（本地 SQLite） |
 
+### 2.5 worktree 场景必做 bootstrap（B1/B2 决策固化）
+
+任务在独立 worktree 进行时（原仓库被占用），创建后**必须**依次执行，否则 LSP 和测试都跑不了：
+
+1. `pnpm install --frozen-lockfile`——共享 pnpm store，通常分钟级。**不要**软链主仓库的 node_modules（只允许一次性试验）
+2. `lsp-doctor --fix --project-dir <worktree>`——生成 worktree 本地 `.lsp-mcp.json`
+3. 同一 AI 会话从主目录切到 worktree → 先调用 LSP `setWorkspaceRoot {"path":"<worktree>"}`
+4. 端口用 `~/.config/her/dev-envs.json` 里预分配的值，不自选
+5. 不复制 `.claude` / `.codex` / `AGENTS.md` 进 worktree
+
 ### 3. 开发自测
 
 本地连本地库，不碰测试/生产环境。

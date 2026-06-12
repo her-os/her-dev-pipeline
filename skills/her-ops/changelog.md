@@ -6,7 +6,7 @@
 
 ### 2026-06-12 relay 三反代 403：网关出口 IP 变更，白名单补新 IP
 
-> 网关 CVM 出口 IP 自 6/9 16:34（北京）起从 192.144.187.174 变为 81.70.184.21（疑与 6/8 K8s 迁移期 VPC 网络变更有关），bwg-la 三反代（relay/relay-pl/relay-cr）IP 白名单将 gateway 流量全部 403，渠道 6/12/13 不可用三天。三个 nginx 配置追加 `allow 81.70.184.21;`（旧 IP 保留），渠道 6/12 Admin API 实测通过。回滚：`/usr/bin/ssh bwg-la 'cd /etc/nginx/sites-available && for f in relay relay-pipellm relay-codingrouter; do cp $f.bak-egress-20260611235720 $f; done && nginx -t && nginx -s reload'`
+> 网关出口 IP 自 6/9 16:34（北京）起从 192.144.187.174 变为 81.70.184.21（gateway 迁 K8s 所致，用户确认；CVM 出站同走此 IP），bwg-la 三反代（relay/relay-pl/relay-cr）IP 白名单将 gateway 流量全部 403，渠道 6/12/13 不可用三天。三个 nginx 配置追加 `allow 81.70.184.21;`（旧 IP 保留），渠道 6/12 Admin API 实测通过。回滚：`/usr/bin/ssh bwg-la 'cd /etc/nginx/sites-available && for f in relay relay-pipellm relay-codingrouter; do cp $f.bak-egress-20260611235720 $f; done && nginx -t && nginx -s reload'`
 
 ---
 
@@ -1150,6 +1150,10 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-12 Hermes 7x24 值守监控上线（圣何塞 VPS → 飞书）
 
 > 圣何塞 VPS 的 Hermes v0.13→v0.16 升级 + ChatGPT 重登 + 飞书接入（白名单+home chat）；新增 cron `her-patrol`（15min 只读巡检，静默/告警/恢复三态）与 `her-daily-report`（北京 09:00 日报），生产机仅暴露 forced-command 只读检查脚本（实测无法执行任意命令）。详见 `ops/hermes-monitor.md`。回滚：`hermes cron pause her-patrol her-daily-report`。
+
+### 2026-06-12 Hermes 告警体系重构：人话化 + 渠道主动测试 + 回声过滤
+
+> 用户反馈告警不可读后重构。patrol v5：渠道主动测试并入（VPS 直连 Admin API 逐渠道调 `/api/channel/test/<id>`，~54s/20 渠道），全部告警人话模板化（业务名+影响+建议）。errwatch v4：回声过滤（自家渠道测试产生的 `channel test bad response` 日志不再当错误报——此前形成监控回声循环）、GIN 4xx 聚合 ≥100 才报、真错误用 `hermes -z -t todo` AI 翻译成人话（禁工具防日志注入，仅有错时调用）。生产机 SSH 菜单收缩为 status/logs/db-stats/gateway-errors（gateway 业务操作回归 Admin API）。首轮渠道测试发现 ch22(401 key 失效)/ch12/ch6(403) 三个坏渠道。核心原则：消息单位=事件+影响+是否需行动，日志原文永不进消息。
 
 ### 2026-06-12 Hermes 加 5 分钟 gateway 错误监控 + 智谱渠道全部下线
 
