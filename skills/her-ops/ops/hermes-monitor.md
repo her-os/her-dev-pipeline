@@ -18,7 +18,9 @@
 ## 检查范围
 
 - **VPS 外部视角**: HTTP 探活 hersoul.cn / club.hersoul.cn / api.tokenic.cn/api/status（`curl -L` 跟随重定向看最终码）；SSL 三域名剩余 <14 天告警
-- **生产内部（受限 SSH）**: 容器 new-api/redis/dokploy-traefik、swarm 服务 her-herweb-a8y5ka/herclub 副本数、磁盘 80%/90% 双阈值、可用内存 <300MB
+- **生产内部（受限 SSH 白名单菜单）**: 容器 new-api/redis/dokploy-traefik、swarm 服务 her-herweb-a8y5ka/herclub/her-web-test 副本数、磁盘 80%/90% 双阈值、可用内存 <300MB、docker 磁盘占用
+- **gateway 渠道**: 每轮巡检检查所有渠道在线状态，下线渠道触发告警
+- **AI 诊断能力**: Hermes 装有 her-ops skill，在飞书对话中可用 AI 分析：查容器日志（`logs <容器> [行数]`）、业务聚合指标（`db-stats`）、gateway 渠道列表（`gateway-channels`）、错误日志摘要（`gateway-errors [分钟]`）、用户 quota（`gateway-quota <uid>`）。同时可直接调用 gateway Admin API 查询/操作
 
 ## 安全围栏（第一阶段：只读，不自动修复）
 
