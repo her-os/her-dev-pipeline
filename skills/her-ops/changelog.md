@@ -1132,3 +1132,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-11 test 环境启用 HTTPS（test.hersoul.cn）
 
 > EdgeOne DNS 加 A 记录 `test.hersoul.cn → 192.144.187.174`（record-3r7ppdvkyw1o，仅 DNS 不加速），`her-test.yml` 加 4 个 domain router（web/websecure × web/test-gateway），Let's Encrypt 证书签发成功（到期 2026-09-09）。IP HTTP 入口保留为备用。回滚：`sudo cp /etc/dokploy/traefik/dynamic/her-test.yml.bak-20260611-https /etc/dokploy/traefik/dynamic/her-test.yml` + tccli 删 DNS 记录。
+
+### 2026-06-12 test 库本地直连：socat 临时代理 + SSH 隧道
+
+> test 双库（her-web-test-db-clone / her-gateway-test-db）无 published port 且宿主机不通 overlay；用 `docker run --rm --network dokploy-network -p 127.0.0.1:PORT:5432 alpine/socat tcp-listen:5432,fork tcp:<容器IP>:5432` + `ssh -L` 即可从本地以 postgres 协议直连（W3 迁移演练用）。用完 `docker stop` 即拆。注意：远程链路逐行 INSERT 1 行 1 RTT，批量写入脚本必须分批。

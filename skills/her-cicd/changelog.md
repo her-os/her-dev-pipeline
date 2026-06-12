@@ -246,3 +246,7 @@
 ### 2026-06-11 W3 回退收尾：test 双库从生产重刷 + 本地 rehearsal 重置
 
 > 清理上一轮 W3 演练残留：refresh-gateway-db → refresh-web-db（顺序必须 gateway 先，否则 web 应用会在 gateway 重建窗口自动 re-provision 写出悬空绑定）→ verify-web-gateway 全绿；克隆库补回 quota_pool/pool_transaction 空表 DDL（dev 构建的 quota worker 需要）；本地 her_web_rehearsal 用 golden TEMPLATE 重置；test 会话已清空（已登录的测试账号需重新登录）。已知问题：deploy-test.sh 内置 repair_test_web_gateway_bindings 的 psql() 只取首行，COPY 多行绑定只修第 1 条，依赖它兜底会漏修。回滚：无需（恢复性操作）。
+
+### 2026-06-12 W3-redo 合 dev + test 部署（PR #255/#256）
+
+> her-web feat/refactor-p3 两轮 PR 合 dev（merge 不 squash；#255 与 dev 冲突 = 上轮回退实现的 verify 文档，整文件取本轮）→ deploy-test 成功（source=7f560f2）。test 克隆库全量迁移演练 + 生产只读 dry-run 全绿，证据见 her-web `docs/refactor/verify/P3-validation.md` W3-redo 章节。回滚：`gh pr revert` 两个 PR 或等 release 自动 resync-dev。
