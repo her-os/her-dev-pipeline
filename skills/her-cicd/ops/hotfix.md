@@ -1,5 +1,7 @@
 # 生产问题修复（Hotfix / follow-up fix）
 
+> **🗄️ 部署方式已更新（2026-06-12）**：合 main 后 K8s 自动发布，不再手动跑 release.sh（已归档）。紧急止血优先考虑 K8s 秒级回滚而非快速发新代码，见 `context/k8s-deploy-pipeline.md` 紧急通道。
+
 ## 触发条件
 
 代码已合入 main 或已部署生产后发现问题，需要继续修复。

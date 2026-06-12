@@ -39,8 +39,8 @@ CICD=$SKILL_DIR/scripts     # ops/ 文件里的 $CICD 指向这里
 
 | 项目 | 仓库 | 部署入口 |
 |------|------|---------|
-| Her-Web | GitHub: Her-Web | `release.sh`（生产）/ `deploy-test.sh`（测试） |
-| her-gateway | GitHub: her-gateway | `deploy.sh`（生产）/ `deploy-test.sh`（测试） |
+| Her-Web | GitHub: Her-Web | 生产=K8s 自动（合 main 即发）/ `deploy-test.sh`（测试）。release.sh 已归档 |
+| her-gateway | GitHub: her-gateway | 生产=K8s 自动（合 main 即发）/ `deploy-test.sh`（测试）。deploy.sh 已归档 |
 | her-salon | GitHub: her-salon | `ops/release-salon.md`（构建签名分发） |
 | HER Engine | GitHub: 独立仓库（待建） | 待定 |
 | herclub | GitHub: herclub（archived） | 随 Her-Web |
@@ -55,9 +55,9 @@ Engine 独立仓库开发，功能成熟后通过 SDK 接口接入 salon。
 ```
 分支模型    dev + main，工作分支（feat/fix/hotfix 等）从 main 拉；dev 是测试池，release 后自动回到 main
 合并方向    工作分支 → dev（测试）→ 工作分支 → main（上线）；test 部署只从 dev 取代码
-发版触发    main 打 tag → 人工跑部署脚本
-CI 职责     Her-Web / gateway 构建 GHCR 备份镜像，不做部署；salon 无 CI
-部署方式    全部手动脚本（release.sh / deploy.sh / build-macos-local.sh）
+发版触发    生产=合 main 自动发布（K8s 轮询 TCR；盯 main 还是 latest 待确认）；tag 用于版本留档/回滚锚点
+CI 职责     Her-Web / gateway 构建镜像推 GHCR + TCR；**TCR 是生产部署的镜像来源**；salon 无 CI
+部署方式    生产=K8s 自动；test=手动脚本；salon=build-macos-local.sh。旧生产脚本已归档（ops/deploy-prod.md）
 版本号      统一 semver，各项目独立，patch-heavy（不轻易升 minor）
 内部 vs 用户  edition 配置（internal / beta），不分仓库
 ```
@@ -96,7 +96,8 @@ CI 职责     Her-Web / gateway 构建 GHCR 备份镜像，不做部署；salon 
 | 功能测完上线生产 | `ops/merge-to-main.md` |
 | 生产/上线后发现问题、已合 main 后继续修、紧急线上修复 | `ops/hotfix.md` |
 | 部署到 test 环境 | `ops/deploy-test.md` |
-| 部署到生产（her-web + gateway + herclub） | `ops/deploy-prod.md` |
+| 部署到生产 → **K8s 自动发布**（合 main 即发） | `context/k8s-deploy-pipeline.md` |
+| 生产部署旧方式 release.sh（🗄️ 已归档，仅过渡期/应急） | `ops/deploy-prod.md` |
 | 生产回滚 | `ops/rollback.md` |
 | 本地开发环境搭建 | `ops/local-dev-setup.md` |
 | salon 构建签名分发（Edition / Feature Flag） | `ops/release-salon.md`（profile: `context/release-profiles/her-salon.toml`） |
@@ -118,7 +119,7 @@ CI 职责     Her-Web / gateway 构建 GHCR 备份镜像，不做部署；salon 
 | `$CICD/create-feat.sh feat/xxx [仓库]` | 从 main 创建功能分支并推远程 | ✅ |
 | `$CICD/resync-dev.sh [仓库]` | commit-tree 重置 dev=main（备份+清理+PR+merge） | ✅ |
 | `$CICD/tag-release.sh v0.2.0 [仓库]` | main 打 tag 并推送 | ✅ |
-| `$CICD/her-web/release.sh <仓库> <tag>` | 生产部署（含自动 resync-dev） | ⚠️ 需确认 |
+| `$CICD/her-web/release.sh <仓库> <tag>` | 🗄️ 已归档：CVM 旧生产部署（仅过渡期/应急，见 ops/deploy-prod.md） | ⚠️ 需确认 |
 | ~~`$CICD/sync-dev.sh`~~ | ❌ 已废弃，用 `resync-dev.sh` 替代 | — |
 
 部署脚本见 ops/ 文件。不传仓库路径时默认用当前目录。

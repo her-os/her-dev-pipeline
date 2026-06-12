@@ -1136,3 +1136,7 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 ### 2026-06-12 test 库本地直连：socat 临时代理 + SSH 隧道
 
 > test 双库（her-web-test-db-clone / her-gateway-test-db）无 published port 且宿主机不通 overlay；用 `docker run --rm --network dokploy-network -p 127.0.0.1:PORT:5432 alpine/socat tcp-listen:5432,fork tcp:<容器IP>:5432` + `ssh -L` 即可从本地以 postgres 协议直连（W3 迁移演练用）。用完 `docker stop` 即拆。注意：远程链路逐行 INSERT 1 行 1 RTT，批量写入脚本必须分批。
+
+### 2026-06-12 K8s 迁移调查 + 集群访问通道建立
+
+> 实测确认：K8s（cls-4n0yzaz7）与 CVM 共用云 PG 172.17.255.75 同两库（pg_stat_activity 验证）；K8s 部署=轮询 TCR 无 webhook；TCR=企业版基础版 664/月（计划迁广州个人版）。新增 `ops/k8s-cluster-access.md`（kubeconfig+隧道，RBAC 待管理员授权）。部署链路详见 her-cicd `context/k8s-deploy-pipeline.md`。

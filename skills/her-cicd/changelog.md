@@ -250,3 +250,12 @@
 ### 2026-06-12 W3-redo 合 dev + test 部署（PR #255/#256）
 
 > her-web feat/refactor-p3 两轮 PR 合 dev（merge 不 squash；#255 与 dev 冲突 = 上轮回退实现的 verify 文档，整文件取本轮）→ deploy-test 成功（source=7f560f2）。test 克隆库全量迁移演练 + 生产只读 dry-run 全绿，证据见 her-web `docs/refactor/verify/P3-validation.md` W3-redo 章节。回滚：`gh pr revert` 两个 PR 或等 release 自动 resync-dev。
+
+### 2026-06-12 W4 管线切换 PR #259 合 dev + test 部署
+
+> feat/refactor-p3 → dev（merge 不 squash），test 栈部署 source=4504d30，verify-web-gateway PASS。
+> 附带：test 全量 353 token 翻 meter-only（快照在 /tmp/token-cutover-test-snapshot*.json，回滚 `tsx src/scripts/quota-migration/token-cutover.ts --rollback`）。
+
+### 2026-06-12 K8s 生产管线文档 + 构建缓存优化
+
+> 新增 `context/k8s-deploy-pipeline.md`（双轨部署、tag 语义、紧急通道、待确认项），deploy-prod/rollback 加双轨提示。her-web 构建缓存迁 GHCR registry 消除 ~18min 全量构建（PR #260，已合 dev，待合 main）。回滚：revert PR #260。
