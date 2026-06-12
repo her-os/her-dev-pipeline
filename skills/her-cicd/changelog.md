@@ -259,3 +259,7 @@
 ### 2026-06-12 K8s 生产管线文档 + 构建缓存优化
 
 > 新增 `context/k8s-deploy-pipeline.md`（双轨部署、tag 语义、紧急通道、待确认项），deploy-prod/rollback 加双轨提示。her-web 构建缓存迁 GHCR registry 消除 ~18min 全量构建（PR #260，已合 dev，待合 main）。回滚：revert PR #260。
+
+### 2026-06-12 W4 修复窗口：her-web + gateway 双部署 test
+
+> her-web PR #266（BUG-001/003/005 修复）合 dev 部署 test（source=e975eda）；her-gateway PR #17（上游 X-Oneapi-Request-Id 透传覆盖修复）合 dev 部署 test。探针全绿。回滚：`docker service update --image her-web:test-prev her-web-test`（gateway 同理 test-prev）。

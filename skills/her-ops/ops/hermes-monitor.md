@@ -21,6 +21,15 @@
 **丽萨受限通道**：VPS key `~/.ssh/lisa-traffic_ed25519` → lisa-sea（104.247.120.130:3944）forced command `/usr/local/bin/traffic-report.sh`，只返回 vnstat 月流量。
 **搬瓦工**：KiwiVM API 凭据放 `/root/.hermes/secrets/bwg-kiwivm.env`（`BWG_VEID`/`BWG_APIKEY`），文件存在时 cloud-watch 自动启用。
 
+## 共享账本（Hermes ↔ Claude 变更同步，坚果云双向）
+
+her-ops 的 changelog.md 即共享账本，单一真相源。布局：
+- 真实文件：Mac `~/Documents/夙愿's库/her-ops-sync/changelog.md`（坚果云同步对内）
+- Mac 软链接：`her-dev-pipeline/skills/her-ops/changelog.md` → 真实文件
+- VPS 软链接：`/root/.hermes/skills/her-ops/changelog.md` → `/root/Nutstore Files/夙愿's库/her-ops-sync/changelog.md`
+
+实测双向各约 10 秒同步；VPS 坚果云客户端能捕获经软链接的写入。软链接方向铁律：**真实文件在同步目录内、链接在外**——反过来（同步目录里放链接）VPS 改动回传时会把链接撞成普通文件。Hermes 的记账义务写在 VPS `~/.hermes/SOUL.md`（每条消息注入，比 skill 加载可靠）。同时写的冲突落在坚果云冲突文件夹，手工合并。
+
 **告警设计原则（最高约束）**：消息单位是「事件+影响+是否需要行动」，不是日志行。日志原文永不进消息正文（存档在 VPS `~/.hermes/logs/her-gateway-errwatch-raw.log` 和 `her-patrol.log`，对话追查用）。同根因只报一次：渠道好坏由 patrol 主动测试权威判定，errwatch 必须过滤渠道测试产生的回声日志。
 
 **架构边界**：gateway 业务操作（渠道列表/测试/quota）直连 Admin API（`https://api.tokenic.cn/api/`，token 在 VPS 脚本与 skill 内）；SSH 受限通道只取必须登机器的信息（容器状态/容器日志/磁盘/DB 聚合指标），菜单仅 status/logs/db-stats/gateway-errors 四个子命令。
