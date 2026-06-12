@@ -4,6 +4,12 @@
 
 ---
 
+### 2026-06-12 relay 三反代 403：网关出口 IP 变更，白名单补新 IP
+
+> 网关 CVM 出口 IP 自 6/9 16:34（北京）起从 192.144.187.174 变为 81.70.184.21（疑与 6/8 K8s 迁移期 VPC 网络变更有关），bwg-la 三反代（relay/relay-pl/relay-cr）IP 白名单将 gateway 流量全部 403，渠道 6/12/13 不可用三天。三个 nginx 配置追加 `allow 81.70.184.21;`（旧 IP 保留），渠道 6/12 Admin API 实测通过。回滚：`/usr/bin/ssh bwg-la 'cd /etc/nginx/sites-available && for f in relay relay-pipellm relay-codingrouter; do cp $f.bak-egress-20260611235720 $f; done && nginx -t && nginx -s reload'`
+
+---
+
 ### 2026-06-08 手动补发 4 人邀请码 + auto-review 链路故障诊断
 
 > 手动补发邀请码：星之白路(EMMTA8GT)、duyi(XQHX8HEA)、小小何(YSW5QHFB)、小七姐(W6LF3MXL)。均 pro/7天/¥1000。
