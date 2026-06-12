@@ -30,11 +30,13 @@
 | `sha-<commit>` | 每次构建（回滚锚点，全部保留） |
 | `vX.Y.Z` + `latest` | 打 tag 时 |
 
-## ⚠️ 待 idoubi 确认（切换前必问）
+## 已查实（2026-06-12 集群只读权限实查）
 
-1. **K8s 轮询盯 `main` 还是 `latest`**：盯 main = 合并即发布生产（无发版把关）；盯 latest = 打 tag 才发布。建议盯 latest。
-2. **readiness probe 配了没有**：决定换容器瞬间是否丢请求。
-3. **轮询间隔**多久；如何查"当前线上跑的是哪个 commit"。
+1. **轮询机制 = keel**（集群内工具），`trigger: poll`，**间隔 1 分钟**，policy force。
+2. **盯 `main` tag**（her-web 和 gateway 都是 `her-tcr.../xxx:main`）→ **合并 main 即发布生产**，打 tag 与发布无关（仅留档/回滚锚点）。如要"打 tag 才发布"需让 idoubi 把镜像改 `latest`。
+3. **探针**：gateway 配置完善（readiness+liveness `/api/status`，maxUnavailable=0，真零停机）；**her-web 无任何探针** → 换容器瞬间有数秒断流风险。需 idoubi 给 her-web 加 readinessProbe（GET /zh 或健康端点，port 3000）+ `maxUnavailable: 0`。
+4. **环境变量已齐**：K8s her-web 的 env 通过 ConfigMap `her-web-env` 挂载，FEISHU_*、CRON_SECRET、HER_INTERNAL_RATE_LIMIT_BYPASS_TOKEN、AUTH_RATE_LIMIT_ENABLED 等全在（6/8 缺配置问题已修复）。
+5. 查"线上跑哪个 commit"：`kubectl describe pod -n her -l app=her-web | grep Image:`（image digest 对应 `sha-<commit>` tag）。集群访问方法 → her-ops `ops/k8s-cluster-access.md`。
 
 ## 紧急通道
 

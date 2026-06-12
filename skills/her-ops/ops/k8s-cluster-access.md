@@ -32,14 +32,14 @@ tccli tke DescribeClusterKubeconfig --region ap-beijing --ClusterId cls-4n0yzaz7
 | 层 | 状态 |
 |----|------|
 | CAM（腾讯云侧） | ✅ 子账号 UIN 100046064896 已有 TKE/TCR/billing/CLB/CVM/VPC 只读 |
-| 集群内 RBAC | ❌ 未授权（kubectl 报 Forbidden）。管理员操作：TKE 控制台 → her-cluster → 授权管理 → RBAC 策略生成器 → 子账号 → 集群维度只读（ro） |
+| 集群内 RBAC | ✅ 只读已授权（2026-06-12），kubectl get/describe/logs 可用 |
 
 ## 部署链路 / 紧急通道
 
 镜像构建、轮询发布、回滚路径 → her-cicd `context/k8s-deploy-pipeline.md`（信息只写一处）。
 
-## 已知待确认项
+## 已查实（2026-06-12）
 
-- K8s 轮询盯 `main` 还是 `latest` tag（问 idoubi）
-- readiness probe 是否配置（拿到 RBAC 后 `kubectl get deploy -o yaml` 自查）
-- K8s her-web 环境变量完整性（FEISHU_* 等，6/8 事故根因之一）
+- 轮询 = keel（ns `keel`），1 分钟一查，盯 `main` tag，policy force
+- gateway 探针完善；**her-web 无探针**（待 idoubi 加 readinessProbe）
+- her-web env 走 ConfigMap `her-web-env`，FEISHU_* 等全齐
