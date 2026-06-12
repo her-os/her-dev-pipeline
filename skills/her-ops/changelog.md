@@ -1155,4 +1155,4 @@ UPDATE tokens SET remain_quota = 285283890 WHERE id = 168;
 
 ### 2026-06-12 her-test.yml 清理 roome.cn 废路由
 
-> 删除 4 个 roome 路由块（her-test-web-router / her-test-api-router 及 websecure），test.hersoul.cn web+gateway 验证 200。回滚：`sudo cp /etc/dokploy/traefik/dynamic/her-test.yml.bak-20260612-roome-cleanup /etc/dokploy/traefik/dynamic/her-test.yml`。遗留：生产 new-api 容器 Docker label 仍有 api.roome.cn（ACME 日志噪音），清理需重建容器 ~30s 中断，留到 DNS 切换后做。
+> 删除 4 个 roome 路由块（her-test-web-router / her-test-api-router 及 websecure），test.hersoul.cn web+gateway 验证 200。回滚：`sudo cp /etc/dokploy/traefik/dynamic/her-test.yml.bak-20260612-roome-cleanup /etc/dokploy/traefik/dynamic/her-test.yml`。遗留 roome label 清理已列入 `ops/k8s-dns-switchover.md` 切换后清单。

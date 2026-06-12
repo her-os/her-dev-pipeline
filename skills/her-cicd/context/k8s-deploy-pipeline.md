@@ -48,6 +48,6 @@
 
 ## 基础设施事实
 
-- TCR：`her-tcr.tencentcloudcr.com`（企业版基础版，北京，664/月；计划迁广州个人版省此费用）
+- TCR：`her-tcr.tencentcloudcr.com`（企业版基础版，北京，664/月）。迁移计划与全部切换后待办 → her-ops `ops/k8s-dns-switchover.md`
 - 数据层与部署无关：云 PG `172.17.255.75`（her_web + newapi 两库），CVM 与 K8s 共用，已实测验证同库
 - K8s 集群访问方式 → her-ops `ops/k8s-cluster-access.md`
