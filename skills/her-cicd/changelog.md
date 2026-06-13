@@ -271,3 +271,7 @@
 ### 2026-06-13 BUG-007 修复合 dev 并部署 test
 
 > her-web PR #267（feat/refactor-p3 5ae6e97，stacked 第二轮，merge commit）合 dev=e844812 → deploy-web test 栈 + verify-web-gateway 通过。回滚：重部署 her-web:test-prev 镜像。
+
+### 2026-06-13 PR-4.2 合 dev 并部署 test
+
+> her-web PR #269（feat/refactor-p4，PR-4.2 删 11 个旧 gateway 余额同步函数 + ensureGatewayBinding，merge commit）合 dev=a7f8fa9 → deploy-web test 栈 + verify-web-gateway 通过；T1 探针 4 项全 PASS，记录为候选 main。回滚：重部署 her-web:test-prev 镜像。
