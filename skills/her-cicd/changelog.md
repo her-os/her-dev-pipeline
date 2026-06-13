@@ -2,6 +2,10 @@
 
 > 存量归档：`changelog-archive/2026-05.md`。新条目 3 行封顶，格式见 SKILL.md。
 
+### 2026-06-13 PR-4.1 合 dev + deploy test
+
+> feat/refactor-p4 → PR #268 → dev（merge commit 825b52c）→ `deploy-test.sh deploy-web` @ 825b52c → T1 探针（旧表静默/gateway 零扣款/用量聚合正常/lazy 建池）全绿。回滚：`git revert 825b52c` on dev + redeploy。
+
 ### 2026-06-10 her-web-test 内存扩容（OOM 修复）
 
 > P2.3a E2E 中 `her-web-test` 512MiB 限额 OOM（exit 139）一次；`docker service update --limit-memory 1024M --env-add NODE_OPTIONS=--max-old-space-size=768` 已生效（1/1，pricing 200，verify-web-gateway ok），`deploy-test.sh` create 块同步补上两参数，update 路径 `--env-add` 增量不冲掉。回滚：`sudo docker service update --limit-memory 512M --env-rm NODE_OPTIONS her-web-test` + 还原脚本两行。
