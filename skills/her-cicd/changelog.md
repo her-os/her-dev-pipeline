@@ -2,6 +2,10 @@
 
 > 存量归档：`changelog-archive/2026-05.md`。新条目 3 行封顶，格式见 SKILL.md。
 
+### 2026-06-14 v0.1.20 Max 续费 hotfix + Max 订阅页上线
+
+> PR #281 squash 合 main(d954cf9) → CVM release.sh 部署 → 生产 migration（24 sub expired, 90 credit expires_at 补齐）→ 全部 AC 验证通过。回滚：`git revert d954cf9` + 恢复备份表 `subscription_backup_20260614` / `credit_backup_20260614`。
+
 ### 2026-06-13 PR-4.1 合 dev + deploy test
 
 > feat/refactor-p4 → PR #268 → dev（merge commit 825b52c）→ `deploy-test.sh deploy-web` @ 825b52c → T1 探针（旧表静默/gateway 零扣款/用量聚合正常/lazy 建池）全绿。回滚：`git revert 825b52c` on dev + redeploy。
